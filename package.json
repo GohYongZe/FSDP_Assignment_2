@@ -42,10 +42,7 @@
     "@types/react": "~19.1.0",
     "eslint": "^9.25.0",
     "eslint-config-expo": "~10.0.0",
-<<<<<<< HEAD
-=======
     "tailwindcss": "^3.4.19",
->>>>>>> f748420b704e260377651a9cdd10b503db4fa9b4
     "typescript": "~5.9.2"
   },
   "private": true
