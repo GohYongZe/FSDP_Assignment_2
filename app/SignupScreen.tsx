@@ -22,6 +22,19 @@ import {
 } from 'react-native';
 import { supabase } from '../lib/supabase';
 
+// Account type age ranges
+const accountTypeAgeRanges: Record<string, { min: number; max: number | null }> = {
+  '360 Account + OCBC 365 Credit Card': { min: 21, max: null },
+  '360 Account': { min: 18, max: null },
+  'Statement Savings Account': { min: 16, max: null },
+  'Bonus+ Savings': { min: 16, max: null },
+  'Monthly Savings Account': { min: 16, max: null },
+  'OCBC Child Development Account (CDA) and Child Savings Account (CSA)': { min: 0, max: 12 },
+  'OCBC MyOwn Account': { min: 7, max: 15 },
+  'Personal Banking - live, work, or study in Singapore': { min: 18, max: null },
+  'Premier Banking - Exclusive Wealth Privileges': { min: 21, max: null },
+};
+
 const SignupScreen = () => {
   const router = useRouter();
   const [fullName, setFullName] = useState('');
@@ -46,25 +59,126 @@ const SignupScreen = () => {
     setShowDatePicker(false);
   };
 
+  // Helper function to generate random digits
+  const generateRandomDigits = (length: number): string => {
+    let result = '';
+    for (let i = 0; i < length; i++) {
+      result += Math.floor(Math.random() * 10);
+    }
+    return result;
+  };
+
+  // Generate numeric account ID
+  const generateNumericAccountId = (): number => {
+    return Math.floor(10000000 + Math.random() * 90000000);
+  };
+
+  // Generate unique bank account number
+  const generateUniqueAccountNumber = async (residency: string): Promise<string> => {
+    let isUnique = false;
+    let accountNo = '';
+    
+    while (!isUnique) {
+      // Generate account number: Bank code (3) + Branch (3) + Account (6)
+      accountNo = '734' + generateRandomDigits(3) + generateRandomDigits(6);
+      
+      // Check if account number already exists
+      const tableName = residency === 'local' ? 'Localaccounts' : 'Foreignaccounts';
+      const { data, error } = await supabase
+        .from(tableName)
+        .select('accountNo')
+        .eq('accountNo', accountNo);
+      
+      if (error) {
+        console.error('Error checking account number uniqueness:', error);
+        isUnique = true;
+      } else if (data.length === 0) {
+        isUnique = true;
+      }
+    }
+    
+    return accountNo;
+  };
+
+  // Generate unique debit card number (for ALL accounts)
+  const generateUniqueDebitCardNumber = async (residency: string): Promise<string> => {
+    let isUnique = false;
+    let debitCardNo = '';
+    
+    while (!isUnique) {
+      // Generate 16-digit debit card number starting with 4321 (Visa debit format)
+      debitCardNo = '4321' + generateRandomDigits(12);
+      
+      // Check if debit card number already exists
+      const tableName = residency === 'local' ? 'Localaccounts' : 'Foreignaccounts';
+      const { data, error } = await supabase
+        .from(tableName)
+        .select('debitCardNo')
+        .eq('debitCardNo', debitCardNo);
+      
+      if (error) {
+        console.error('Error checking debit card number uniqueness:', error);
+        isUnique = true;
+      } else if (data.length === 0) {
+        isUnique = true;
+      }
+    }
+    
+    return debitCardNo;
+  };
+
+  // Generate unique credit card number (for credit card accounts only)
+  const generateUniqueCreditCardNumber = async (residency: string): Promise<string> => {
+    let isUnique = false;
+    let creditCardNo = '';
+    
+    while (!isUnique) {
+      // Generate 16-digit credit card number starting with 5555 (Mastercard)
+      creditCardNo = '5555' + generateRandomDigits(12);
+      
+      // Check if credit card number already exists
+      const tableName = residency === 'local' ? 'Localaccounts' : 'Foreignaccounts';
+      const { data, error } = await supabase
+        .from(tableName)
+        .select('creditCardNo')
+        .eq('creditCardNo', creditCardNo);
+      
+      if (error) {
+        console.error('Error checking credit card number uniqueness:', error);
+        isUnique = true;
+      } else if (data.length === 0) {
+        isUnique = true;
+      }
+    }
+    
+    return creditCardNo;
+  };
+
+  // Format card numbers with dashes
+  const formatCardNumber = (cardNumber: string): string => {
+    const cleanNumber = cardNumber.replace(/[-\s]/g, '');
+    return cleanNumber.replace(/(\d{4})/g, '$1-').slice(0, -1);
+  };
+
   const getAccountTypeOptions = () => {
     return residency === 'local'
       ? [
           { label: 'Select an option', value: '' },
-          { label: '360 Account + OCBC 365 Credit Card', value: '360-credit' },
-          { label: '360 Account', value: '360' },
-          { label: 'Statement Savings Account', value: 'statement-savings' },
-          { label: 'Bonus + Savings', value: 'bonus-savings' },
-          { label: 'Monthly Savings Accounts', value: 'monthly-savings' },
-          { label: 'OCBC Child Development Account (CDA)', value: 'cda' },
-          { label: '360 Account + OCBC MyOwn Account', value: '360-myown' },
+          { label: '360 Account + OCBC 365 Credit Card', value: '360 Account + OCBC 365 Credit Card' },
+          { label: '360 Account', value: '360 Account' },
+          { label: 'Statement Savings Account', value: 'Statement Savings Account' },
+          { label: 'Bonus+ Savings', value: 'Bonus+ Savings' },
+          { label: 'Monthly Savings Account', value: 'Monthly Savings Account' },
+          { label: 'OCBC Child Development Account (CDA) and Child Savings Account (CSA)', value: 'OCBC Child Development Account (CDA) and Child Savings Account (CSA)' },
+          { label: 'OCBC MyOwn Account', value: 'OCBC MyOwn Account' },
         ]
       : [
           { label: 'Select an option', value: '' },
           {
             label: 'Personal Banking - live, work, or study in Singapore',
-            value: 'personal',
+            value: 'Personal Banking - live, work, or study in Singapore',
           },
-          { label: 'Premier Banking - Exclusive Wealth Privileges', value: 'premier' },
+          { label: 'Premier Banking - Exclusive Wealth Privileges', value: 'Premier Banking - Exclusive Wealth Privileges' },
         ];
   };
 
@@ -75,77 +189,412 @@ const SignupScreen = () => {
   };
 
   const handleSignup = async () => {
-    // Validation
-    if (!fullName || !email || !password || !phone || !address || !nationality || !accountType) {
-      setErrorMessage('Please fill in all required fields');
-      return;
-    }
-
-    if (residency === 'local' && !nric) {
-      setErrorMessage('NRIC is required for local customers');
-      return;
-    }
-
-    setLoading(true);
-    setErrorMessage('');
-
     try {
-      // Supabase authentication and database operations
-      // Step 1: Create authentication account
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: email,
-        password: password,
-      });
-      
-      if (authError) {
-        setLoading(false);
-        setErrorMessage(authError.message);
+      // Basic required fields validation
+      if (!fullName || !email || !password || !nationality || !accountType) {
+        const error = 'Please fill in all required fields';
+        setErrorMessage(error);
+        Alert.alert('Validation Error', error);
         return;
       }
-      
-      // Step 2: Save user information to database
-      const { error: insertError } = await supabase.from('users').insert([{
-        user_id: authData.user?.id,
-        email,
-        full_name: fullName,
-        phone,
-        date_of_birth: dob.toISOString(),
-        address,
-        nric: residency === 'local' ? nric : null,
-        nationality,
-        account_type: accountType,
-        residency,
-        created_at: new Date().toISOString(),
-      }]);
-      
-      if (insertError) {
-        setLoading(false);
-        setErrorMessage('Account created but failed to save user data. Please contact support.');
-        return;
-      }
-      
-      setLoading(false);
-      Alert.alert('Success', 'Account created successfully!', [
-        {
-          text: 'OK',
-          onPress: () => router.replace('/LoginScreen'),
-        },
-      ]);
 
-      // Temporary placeholder for development (remove when Supabase is ready)
-      setTimeout(() => {
-        setLoading(false);
-        Alert.alert('Success', 'Account created successfully!', [
-          {
-            text: 'OK',
-            onPress: () => router.replace('/LoginScreen'),
-          },
-        ]);
-      }, 1500);
+      // Email validation
+      const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailPattern.test(email)) {
+        const error = 'Please enter a valid email address';
+        setErrorMessage(error);
+        Alert.alert('Invalid Email', error);
+        return;
+      }
+
+      // Phone validation
+      let formattedPhone = phone.replace(/\s+/g, ''); // Remove all spaces
+      if (residency === 'local') {
+        // Singapore: 8 digits, starts with 8 or 9
+        const phonePattern = /^(8|9)\d{7}$/;
+        if (!phonePattern.test(formattedPhone)) {
+          const error = 'Please enter a valid Singapore phone number (8 digits, starts with 8 or 9)';
+          setErrorMessage(error);
+          Alert.alert('Validation Error', error);
+          return;
+        }
+        // Add +65 if not already present
+        if (!formattedPhone.startsWith('+65')) {
+          formattedPhone = '+65' + formattedPhone;
+        }
+      } else {
+        const intlPhonePattern = /^\+?[0-9\s\-()]{7,20}$/;
+        if (!intlPhonePattern.test(formattedPhone)) {
+          setErrorMessage('Please enter a valid phone number');
+          Alert.alert('Validation Error', 'Please enter a valid phone number');
+          return;
+        }
+      }
+
+      // Nationality validation (letters and spaces only)
+      const nationalityPattern = /^[A-Za-z\s]+$/;
+      if (!nationalityPattern.test(nationality)) {
+        setErrorMessage('Please enter a valid nationality (letters and spaces only)');
+        Alert.alert('Validation Error', 'Please enter a valid nationality (letters and spaces only)');
+        return;
+      }
+
+      // NRIC validation (for local accounts, REQUIRED)
+      if (residency === 'local') {
+        if (!nric || nric.trim() === '') {
+          setErrorMessage('NRIC is required for local accounts');
+          Alert.alert('Validation Error', 'NRIC is required for local accounts');
+          return;
+        }
+        
+        const nricPattern = /^[STMFG]\d{7}[A-Z]$/i;
+        if (!nricPattern.test(nric)) {
+          setErrorMessage('Please enter a valid NRIC (e.g., S1234567A)');
+          Alert.alert('Invalid NRIC', 'Please enter a valid NRIC (e.g., S1234567A)');
+          return;
+        }
+      }
+
+      // Date of Birth and Age validation
+      const dobDate = new Date(dob);
+      const today = new Date();
+      if (dobDate >= today) {
+        setErrorMessage('Date of birth must be in the past');
+        Alert.alert('Invalid Date', 'Date of birth must be in the past');
+        return;
+      }
+
+      // Calculate age more accurately
+      let age = today.getFullYear() - dobDate.getFullYear();
+      const monthDiff = today.getMonth() - dobDate.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dobDate.getDate())) {
+        age--;
+      }
+
+      // Age validation based on account type
+      const ageRange = accountTypeAgeRanges[accountType];
+      if (ageRange) {
+        if (age < ageRange.min) {
+          const error = `Your age does not meet the requirements for this account type. Minimum age: ${ageRange.min} years`;
+          setErrorMessage(error);
+          Alert.alert('Age Requirement Not Met', error);
+          return;
+        }
+        if (ageRange.max !== null && age > ageRange.max) {
+          const error = `Your age does not meet the requirements for this account type. Maximum age: ${ageRange.max} years`;
+          setErrorMessage(error);
+          Alert.alert('Age Requirement Not Met', error);
+          return;
+        }
+      }
+
+      // Account type validation
+      if (!accountType || accountType === '') {
+        const error = "Please select a valid account type. 'Select an option' is not allowed";
+        setErrorMessage(error);
+        Alert.alert('Validation Error', error);
+        return;
+      }
+      
+      // Password validation
+      if (password.length < 8) {
+        const error = 'Password must be at least 8 characters long';
+        setErrorMessage(error);
+        Alert.alert('Password Too Short', error);
+        return;
+      }
+      const passwordPattern = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@$!%*#?&]{8,}$/;
+      if (!passwordPattern.test(password)) {
+        const error = 'Password must contain at least one letter and one number';
+        setErrorMessage(error);
+        Alert.alert('Invalid Password', error);
+        return;
+      }
+
+      setLoading(true);
+      setErrorMessage('');
+
+      console.log('Creating account with:', { fullName, email, residency, accountType });
+
+      // Check if email already has accounts in the database
+      const localCheck = await supabase
+        .from('Localaccounts')
+        .select('*')
+        .eq('emailAddress', email);
+
+      const foreignCheck = await supabase
+        .from('Foreignaccounts')
+        .select('*')
+        .eq('emailAddress', email);
+
+      let existingAccounts: string[] = [];
+      let existingUserData: any = null;
+
+      if (localCheck.data && localCheck.data.length > 0) {
+        existingAccounts = existingAccounts.concat(localCheck.data.map((acc: any) => acc.accountType));
+        existingUserData = localCheck.data[0];
+      }
+      if (foreignCheck.data && foreignCheck.data.length > 0) {
+        existingAccounts = existingAccounts.concat(foreignCheck.data.map((acc: any) => acc.accountType));
+        if (!existingUserData) {
+          existingUserData = foreignCheck.data[0];
+        }
+      }
+
+      // Handle existing accounts
+      if (existingAccounts.length > 0) {
+        const accountsList = existingAccounts.join(', ');
+        
+        // Show alert asking if they want to add another account
+        Alert.alert(
+          'Existing Account Found',
+          `This email already has the following account(s): ${accountsList}.\n\nDo you want to add another account with the same email?`,
+          [
+            {
+              text: 'Cancel',
+              onPress: () => {
+                setLoading(false);
+                setErrorMessage('Account creation cancelled. Please use a different email or login with your existing account');
+              },
+              style: 'cancel',
+            },
+            {
+              text: 'Continue',
+              onPress: async () => {
+                // Validate that key details match existing accounts
+                const detailsMatch = validateExistingDetails(existingUserData, {
+                  name: fullName,
+                  contactNo: formattedPhone,
+                  address: address,
+                  dateOfBirth: dob.toISOString().split('T')[0],
+                  nationality: nationality,
+                  nric: nric,
+                });
+                
+                if (!detailsMatch.isValid) {
+                  setLoading(false);
+                  setErrorMessage(`The following details don't match your existing account:\n${detailsMatch.errors.join('\n')}\n\nPlease ensure all personal details match your existing account`);
+                  return;
+                }
+                
+                // Continue with account creation
+                await createAccount(formattedPhone, true, existingUserData);
+              },
+            },
+          ]
+        );
+        return;
+      }
+
+      // No existing account, proceed with normal signup
+      await createAccount(formattedPhone, false, null);
+
     } catch (error) {
       setLoading(false);
       setErrorMessage(
         error instanceof Error ? error.message : 'Signup failed. Please try again.'
+      );
+    }
+  };
+
+  // Function to validate existing details
+  const validateExistingDetails = (existingData: any, newData: any) => {
+    const errors: string[] = [];
+    
+    // Check name (allow some flexibility with case and spacing)
+    if (existingData.name && newData.name) {
+      const existingName = existingData.name.toLowerCase().trim();
+      const newName = newData.name.toLowerCase().trim();
+      if (existingName !== newName) {
+        errors.push(`• Name: Expected "${existingData.name}", but got "${newData.name}"`);
+      }
+    }
+    
+    // Check phone number (normalize format)
+    if (existingData.contactNo && newData.contactNo) {
+      const existingPhone = existingData.contactNo.replace(/\s+/g, '');
+      const newPhone = newData.contactNo.replace(/\s+/g, '');
+      if (existingPhone !== newPhone) {
+        errors.push(`• Phone: Expected "${existingData.contactNo}", but got "${newData.contactNo}"`);
+      }
+    }
+    
+    // Check date of birth
+    if (existingData.dateOfBirth && newData.dateOfBirth) {
+      if (existingData.dateOfBirth !== newData.dateOfBirth) {
+        errors.push(`• Date of Birth: Expected "${existingData.dateOfBirth}", but got "${newData.dateOfBirth}"`);
+      }
+    }
+    
+    // Check nationality
+    if (existingData.nationality && newData.nationality) {
+      const existingNat = existingData.nationality.toLowerCase().trim();
+      const newNat = newData.nationality.toLowerCase().trim();
+      if (existingNat !== newNat) {
+        errors.push(`• Nationality: Expected "${existingData.nationality}", but got "${newData.nationality}"`);
+      }
+    }
+    
+    // Check NRIC for local accounts
+    if (existingData.nric && newData.nric) {
+      const existingNric = existingData.nric.toUpperCase().trim();
+      const newNric = newData.nric.toUpperCase().trim();
+      if (existingNric !== newNric) {
+        errors.push(`• NRIC: Expected "${existingData.nric}", but got "${newData.nric}"`);
+      }
+    }
+    
+    return {
+      isValid: errors.length === 0,
+      errors: errors,
+    };
+  };
+
+  // Function to create account
+  const createAccount = async (formattedPhone: string, isExistingUser: boolean, existingUserData: any) => {
+    try {
+      const balance = 0;
+      const accountNo = await generateUniqueAccountNumber(residency);
+      const accountId = generateNumericAccountId();
+      
+      // Generate debit card number for ALL accounts
+      const debitCardNo = await generateUniqueDebitCardNumber(residency);
+      
+      // Generate credit card number ONLY for accounts that include "Credit Card"
+      let creditCardNo: string | null = null;
+      if (accountType.includes('Credit Card') || accountType === '360 Account + OCBC 365 Credit Card') {
+        creditCardNo = await generateUniqueCreditCardNumber(residency);
+      }
+
+      let authUserId = null;
+
+      if (isExistingUser) {
+        // User already exists, try to sign in with provided credentials
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+          email: email,
+          password: password,
+        });
+
+        if (signInError) {
+          setLoading(false);
+          // More specific error handling for password mismatch
+          if (signInError.message === 'Invalid login credentials') {
+            // Check if they entered the same password as stored in database
+            if (existingUserData && existingUserData.password) {
+              if (password === existingUserData.password) {
+                setErrorMessage('There seems to be an issue with authentication. The password matches your account but authentication failed. Please try logging in first, then create a new account');
+              } else {
+                setErrorMessage('Password mismatch! You previously used a different password for this email. Please use the same password as your existing account');
+              }
+            } else {
+              setErrorMessage('This email is already registered with a different password. Please use the same password as your existing account');
+            }
+          } else {
+            setErrorMessage('Error signing in: ' + signInError.message);
+          }
+          return;
+        }
+
+        authUserId = signInData.user?.id;
+        console.log('Using existing Auth user:', authUserId);
+        
+      } else {
+        // New user - create auth account
+        const { data: authData, error: authError } = await supabase.auth.signUp({
+          email: email,
+          password: password,
+        });
+
+        if (authError) {
+          if (authError.message === 'User already registered') {
+            setLoading(false);
+            setErrorMessage('This email is already registered. Please sign in or use a different email');
+            return;
+          } else {
+            setLoading(false);
+            setErrorMessage('Error creating account: ' + authError.message);
+            return;
+          }
+        }
+
+        // New user created successfully
+        authUserId = authData.user?.id;
+        console.log('Created new Auth user:', authUserId);
+
+        // For new users, sign them in automatically
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+          email: email,
+          password: password,
+        });
+
+        if (signInError) {
+          console.error('Error signing in new user:', signInError.message);
+          setLoading(false);
+          setErrorMessage('Account created but unable to sign in. Please try logging in manually');
+          return;
+        }
+      }
+      
+      const userData: any = {
+        accountId: accountId,
+        name: fullName,
+        password: password,
+        dateOfBirth: dob.toISOString().split('T')[0],
+        address: address,
+        contactNo: formattedPhone,
+        emailAddress: email,
+        nationality: nationality,
+        accountType: accountType,
+        balance: balance,
+        accountNo: accountNo,
+        debitCardNo: debitCardNo,
+      };
+
+      // Add credit card number if generated
+      if (creditCardNo) {
+        userData.creditCardNo = creditCardNo;
+      }
+
+      // Add NRIC for local accounts
+      if (residency === 'local') {
+        userData.nric = nric;
+      }
+
+      const tableName = residency === 'local' ? 'Localaccounts' : 'Foreignaccounts';
+      console.log('Inserting into table:', tableName);
+
+      const { data: dbData, error: dbError } = await supabase
+        .from(tableName)
+        .insert([userData]);
+
+      if (dbError) {
+        console.error('Error saving user data:', dbError.message);
+        setLoading(false);
+        setErrorMessage('Error saving user data: ' + dbError.message);
+        return;
+      }
+
+      console.log('User data saved successfully:', dbData);
+      
+      setLoading(false);
+      
+      // Show success message with account details
+      let successMessage = `Account created successfully!\nAccount Number: ${accountNo}\nDebit Card Number: ${formatCardNumber(debitCardNo)}`;
+      if (creditCardNo) {
+        successMessage += `\nCredit Card Number: ${formatCardNumber(creditCardNo)}`;
+      }
+      
+      Alert.alert('Success', successMessage, [
+        {
+          text: 'OK',
+          onPress: () => router.replace('/homepage'),
+        },
+      ]);
+
+    } catch (error) {
+      setLoading(false);
+      setErrorMessage(
+        error instanceof Error ? error.message : 'Failed to create account. Please try again.'
       );
     }
   };
@@ -233,7 +682,7 @@ const SignupScreen = () => {
             <View style={styles.alert}>
               <MaterialCommunityIcons
                 name="alert-circle"
-                size={20}
+                size={24}
                 color="#dc2626"
               />
               <Text style={styles.alertText}>{errorMessage}</Text>
@@ -644,18 +1093,29 @@ const styles = StyleSheet.create({
   alert: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fef2f2',
-    borderColor: '#fecaca',
-    borderWidth: 1,
+    backgroundColor: '#fee2e2',
+    borderColor: '#dc2626',
+    borderWidth: 2,
     borderRadius: 8,
-    padding: 12,
+    padding: 16,
     marginBottom: 20,
-    gap: 10,
+    marginTop: 10,
+    gap: 12,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
   alertText: {
     color: '#dc2626',
-    fontSize: 12,
+    fontSize: 14,
+    fontWeight: '600',
     flex: 1,
+    lineHeight: 20,
   },
   mainTitle: {
     fontSize: 20,

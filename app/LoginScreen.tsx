@@ -50,6 +50,35 @@ const LoginScreen = () => {
       }
       
       if (data.user) {
+        // Fetch user data from database
+        // Try local accounts first
+        const { data: localData, error: localError } = await supabase
+          .from('Localaccounts')
+          .select('*')
+          .eq('emailAddress', email);
+
+        let userData = null;
+
+        if (localData && localData.length > 0) {
+          userData = localData;
+        } else {
+          // Try foreign accounts
+          const { data: foreignData, error: foreignError } = await supabase
+            .from('Foreignaccounts')
+            .select('*')
+            .eq('emailAddress', email);
+
+          if (foreignData && foreignData.length > 0) {
+            userData = foreignData;
+          }
+        }
+
+        if (userData && userData.length > 0) {
+          console.log('User accounts found:', userData.length);
+          // If user has multiple accounts, you might want to show a selection screen
+          // For now, we'll just log in successfully
+        }
+
         setLoading(false);
         Alert.alert('Success', 'Login successful! Redirecting...', [
           {
