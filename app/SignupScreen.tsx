@@ -18,6 +18,7 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
+import { supabase } from '../lib/supabase';
 
 const SignupScreen = () => {
   const router = useRouter();
@@ -87,25 +88,49 @@ const SignupScreen = () => {
     setErrorMessage('');
 
     try {
-      // TODO: Integrate with Supabase authentication
-      // const { data, error } = await supabase.auth.signUp({
-      //   email: email,
-      //   password: password,
-      // });
+      // Supabase authentication and database operations
+      // Step 1: Create authentication account
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: email,
+        password: password,
+      });
+      
+      if (authError) {
+        setLoading(false);
+        setErrorMessage(authError.message);
+        return;
+      }
+      
+      // Step 2: Save user information to database
+      const { error: insertError } = await supabase.from('users').insert([{
+        user_id: authData.user?.id,
+        email,
+        full_name: fullName,
+        phone,
+        date_of_birth: dob.toISOString(),
+        address,
+        nric: residency === 'local' ? nric : null,
+        nationality,
+        account_type: accountType,
+        residency,
+        created_at: new Date().toISOString(),
+      }]);
+      
+      if (insertError) {
+        setLoading(false);
+        setErrorMessage('Account created but failed to save user data. Please contact support.');
+        return;
+      }
+      
+      setLoading(false);
+      Alert.alert('Success', 'Account created successfully!', [
+        {
+          text: 'OK',
+          onPress: () => router.replace('/LoginScreen'),
+        },
+      ]);
 
-      // TODO: Save user information to database
-      // const { data, insertError } = await supabase.from('users').insert([{
-      //   email,
-      //   fullName,
-      //   phone,
-      //   dateOfBirth: dob,
-      //   address,
-      //   nric: residency === 'local' ? nric : null,
-      //   nationality,
-      //   accountType,
-      //   residency,
-      // }]);
-
+      // Temporary placeholder for development (remove when Supabase is ready)
       setTimeout(() => {
         setLoading(false);
         Alert.alert('Success', 'Account created successfully!', [

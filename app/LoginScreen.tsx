@@ -14,6 +14,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { supabase } from '../lib/supabase';
 
 const LoginScreen = () => {
   const router = useRouter();
@@ -34,14 +35,19 @@ const LoginScreen = () => {
     setErrorMessage('');
 
     try {
-      // TODO: Integrate with Supabase authentication
-      // const { data, error } = await supabase.auth.signInWithPassword({
-      //   email: email,
-      //   password: password,
-      // });
-
-      // Placeholder for successful login
-      setTimeout(() => {
+      // Supabase authentication
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email,
+        password: password,
+      });
+      
+      if (error) {
+        setLoading(false);
+        setErrorMessage(error.message);
+        return;
+      }
+      
+      if (data.user) {
         setLoading(false);
         Alert.alert('Success', 'Login successful! Redirecting...', [
           {
@@ -49,7 +55,7 @@ const LoginScreen = () => {
             onPress: () => router.replace('/homepage'),
           },
         ]);
-      }, 1500);
+      }
     } catch (error) {
       setLoading(false);
       setErrorMessage(
