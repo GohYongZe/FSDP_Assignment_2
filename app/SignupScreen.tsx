@@ -8,8 +8,10 @@ import {
   FlatList,
   Image,
   ImageBackground,
+  KeyboardAvoidingView,
   Linking,
   Modal,
+  Platform,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -168,6 +170,11 @@ const SignupScreen = () => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      >
       <View style={styles.container}>
         <ScrollView
           style={styles.scrollView}
@@ -555,6 +562,7 @@ const SignupScreen = () => {
           </View>
         </Modal>
       </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
