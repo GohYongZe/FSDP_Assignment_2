@@ -101,6 +101,10 @@ const Homepage = () => {
       <Text style={styles.welcomeText}>Welcome,</Text>
       <Text style={styles.userName}>{userName || 'User'}</Text>
       
+      <TouchableOpacity style={styles.linkButton} onPress={() => router.push('/linkaccounts')}>
+        <Text style={styles.linkButtonText}>Manage Linked Accounts test</Text>
+      </TouchableOpacity>
+
       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
         <Text style={styles.logoutButtonText}>Logout</Text>
       </TouchableOpacity>
@@ -135,6 +139,19 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   logoutButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  linkButton: {
+    backgroundColor: '#007AFF', // Blue color for action
+    paddingVertical: 12,
+    paddingHorizontal: 30,
+    borderRadius: 8,
+    marginTop: 10,
+    marginBottom: 10,
+  },
+  linkButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '700',
