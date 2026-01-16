@@ -666,7 +666,8 @@ const More = ({ navigation }: MoreProps) => {
     <View key={category} style={styles.section}>
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>{category}</Text>
-        <TouchableOpacity onPress={() => Alert.alert(t.viewMore, `${t.viewMore} ${category}`)}>  <Text style={styles.viewMore}>{t.viewMore}</Text>
+        <TouchableOpacity onPress={() => Alert.alert(t.viewMore, `${t.viewMore} ${category}`)}>
+          <Text style={styles.viewMore}>{t.viewMore}</Text>
         </TouchableOpacity>
       </View>
       <View style={styles.iconGrid}>
