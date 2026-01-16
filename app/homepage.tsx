@@ -77,7 +77,7 @@ const Homepage = () => {
               if (error) {
                 Alert.alert('Error', 'Failed to logout: ' + error.message);
               } else {
-                router.replace('/LandingScreen');
+                router.replace('/landing');
               }
             } catch (error) {
               Alert.alert('Error', 'An unexpected error occurred during logout');
@@ -103,6 +103,10 @@ const Homepage = () => {
       
       <TouchableOpacity style={styles.linkButton} onPress={() => router.push('/linkaccounts')}>
         <Text style={styles.linkButtonText}>Manage Linked Accounts test</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.moreButton} onPress={() => router.push('/more')}>
+        <Text style={styles.moreButtonText}>More Options</Text>
       </TouchableOpacity>
 
       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
@@ -152,6 +156,18 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   linkButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  moreButton: {
+    backgroundColor: '#0c83bf',
+    paddingVertical: 12,
+    paddingHorizontal: 30,
+    borderRadius: 8,
+    marginTop: 10,
+  },
+  moreButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '700',

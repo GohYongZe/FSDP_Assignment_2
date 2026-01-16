@@ -1,6 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -18,7 +19,7 @@ import {
 } from 'react-native';
 import { supabase } from '../lib/supabase';
 
-const LoginScreen = () => {
+const Login = () => {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -26,10 +27,191 @@ const LoginScreen = () => {
   const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [selectedLanguage, setSelectedLanguage] = useState('en');
+
+  const translations = {
+    en: {
+      welcomeBack: 'Welcome Back',
+      welcomeSubtitle: 'Log in to access your OCBC banking services',
+      emailLabel: 'Email Address:',
+      emailPlaceholder: 'you@example.com',
+      passwordLabel: 'Password:',
+      passwordPlaceholder: 'Enter your password',
+      rememberMe: 'Remember me on this device',
+      loginButton: 'Login',
+      newToOCBC: 'New to OCBC? ',
+      createAccount: 'Create an Account',
+      fillAllFields: 'Please fill in all fields',
+      loginSuccess: 'Success',
+      loginSuccessMessage: 'Login successful! Redirecting...',
+      loginFailed: 'Login failed. Please try again.'
+    },
+    zh: {
+      welcomeBack: '欢迎回来',
+      welcomeSubtitle: '登录以访问您的华侨银行服务',
+      emailLabel: '电子邮件地址：',
+      emailPlaceholder: 'you@example.com',
+      passwordLabel: '密码：',
+      passwordPlaceholder: '输入您的密码',
+      rememberMe: '在此设备上记住我',
+      loginButton: '登录',
+      newToOCBC: '初次使用华侨银行？',
+      createAccount: '创建账户',
+      fillAllFields: '请填写所有字段',
+      loginSuccess: '成功',
+      loginSuccessMessage: '登录成功！正在跳转...',
+      loginFailed: '登录失败。请再试一次。'
+    },
+    ms: {
+      welcomeBack: 'Selamat Kembali',
+      welcomeSubtitle: 'Log masuk untuk mengakses perkhidmatan perbankan OCBC anda',
+      emailLabel: 'Alamat Emel:',
+      emailPlaceholder: 'anda@contoh.com',
+      passwordLabel: 'Kata Laluan:',
+      passwordPlaceholder: 'Masukkan kata laluan anda',
+      rememberMe: 'Ingat saya pada peranti ini',
+      loginButton: 'Log Masuk',
+      newToOCBC: 'Baharu ke OCBC? ',
+      createAccount: 'Cipta Akaun',
+      fillAllFields: 'Sila isi semua medan',
+      loginSuccess: 'Berjaya',
+      loginSuccessMessage: 'Log masuk berjaya! Mengalihkan...',
+      loginFailed: 'Log masuk gagal. Sila cuba lagi.'
+    },
+    ta: {
+      welcomeBack: 'மீண்டும் வரவேற்கிறோம்',
+      welcomeSubtitle: 'உங்கள் OCBC வங்கி சேவைகளை அணுக உள்நுழையவும்',
+      emailLabel: 'மின்னஞ்சல் முகவரி:',
+      emailPlaceholder: 'நீங்கள்@உதாரணம்.com',
+      passwordLabel: 'கடவுச்சோல்:',
+      passwordPlaceholder: 'உங்கள் கடவுச்சோல்லை உள்ளிடவும்',
+      rememberMe: 'இந்த சாதனத்தில் என்னை நினைவில் வைக்கவும்',
+      loginButton: 'உள்நுழையவும்',
+      newToOCBC: 'OCBC க்கு புதிதா? ',
+      createAccount: 'கணக்கை உருவாக்கவும்',
+      fillAllFields: 'அனைத்து புலங்களையும் நிரப்பவும்',
+      loginSuccess: 'வெற்றி',
+      loginSuccessMessage: 'உள்நுழைவு வெற்றிகரமாக இருந்தது! மாற்றுதல்...',
+      loginFailed: 'உள்நுழைவு தோல்வியடைந்தது. மீண்டும் முயற்சிக்கவும்.'
+    },
+    hi: {
+      welcomeBack: 'पुनः स्वागत है',
+      welcomeSubtitle: 'अपनी OCBC बैंकिंग सेवाओं तक पहुंचने के लिए लॉग इन करें',
+      emailLabel: 'ईमेल पता:',
+      emailPlaceholder: 'आप@उदाहरण.com',
+      passwordLabel: 'पासवर्ड:',
+      passwordPlaceholder: 'अपना पासवर्ड दर्ज करें',
+      rememberMe: 'इस डिवाइस पर मुझे याद रखें',
+      loginButton: 'लॉग इन करें',
+      newToOCBC: 'OCBC में नए? ',
+      createAccount: 'खाता बनाएं',
+      fillAllFields: 'कृपया सभी फ़ील्ड भरें',
+      loginSuccess: 'सफलता',
+      loginSuccessMessage: 'लॉगिन सफल! पुनर्निर्देशित कर रहे हैं...',
+      loginFailed: 'लॉगिन विफल। कृपया पुनः प्रयास करें।'
+    },
+    ja: {
+      welcomeBack: 'お帰りなさい',
+      welcomeSubtitle: 'OCBCバンキングサービスにアクセスするためにログインしてください',
+      emailLabel: 'メールアドレス：',
+      emailPlaceholder: 'you@example.com',
+      passwordLabel: 'パスワード：',
+      passwordPlaceholder: 'パスワードを入力',
+      rememberMe: 'このデバイスで記憶する',
+      loginButton: 'ログイン',
+      newToOCBC: 'OCBCが初めてですか？',
+      createAccount: 'アカウントを作成',
+      fillAllFields: 'すべてのフィールドを入力してください',
+      loginSuccess: '成功',
+      loginSuccessMessage: 'ログイン成功！リダイレクト中...',
+      loginFailed: 'ログインに失敗しました。もう一度お試しください。'
+    },
+    ko: {
+      welcomeBack: '다시 오신 것을 환영합니다',
+      welcomeSubtitle: 'OCBC 뱅킹 서비스에 액세스하려면 로그인하세요',
+      emailLabel: '이메일 주소:',
+      emailPlaceholder: 'you@example.com',
+      passwordLabel: '비밀번호:',
+      passwordPlaceholder: '비밀번호를 입력하세요',
+      rememberMe: '이 기기에 내 정보 기억하기',
+      loginButton: '로그인',
+      newToOCBC: 'OCBC가 처음이신가요? ',
+      createAccount: '계정 만들기',
+      fillAllFields: '모든 필드를 작성해주세요',
+      loginSuccess: '성공',
+      loginSuccessMessage: '로그인 성공! 리디렉션 중...',
+      loginFailed: '로그인에 실패했습니다. 다시 시도해주세요.'
+    },
+    es: {
+      welcomeBack: 'Bienvenido de nuevo',
+      welcomeSubtitle: 'Inicie sesión para acceder a sus servicios bancarios de OCBC',
+      emailLabel: 'Correo electrónico:',
+      emailPlaceholder: 'tu@ejemplo.com',
+      passwordLabel: 'Contraseña:',
+      passwordPlaceholder: 'Ingrese su contraseña',
+      rememberMe: 'Recuérdame en este dispositivo',
+      loginButton: 'Iniciar sesión',
+      newToOCBC: '¿Nuevo en OCBC? ',
+      createAccount: 'Crear una cuenta',
+      fillAllFields: 'Por favor, complete todos los campos',
+      loginSuccess: 'Éxito',
+      loginSuccessMessage: '¡Inicio de sesión exitoso! Redirigiendo...',
+      loginFailed: 'Inicio de sesión fallido. Por favor, inténtelo de nuevo.'
+    },
+    fr: {
+      welcomeBack: 'Bon retour',
+      welcomeSubtitle: 'Connectez-vous pour accéder à vos services bancaires OCBC',
+      emailLabel: 'Adresse e-mail:',
+      emailPlaceholder: 'vous@exemple.com',
+      passwordLabel: 'Mot de passe:',
+      passwordPlaceholder: 'Entrez votre mot de passe',
+      rememberMe: 'Se souvenir de moi sur cet appareil',
+      loginButton: 'Connexion',
+      newToOCBC: 'Nouveau chez OCBC? ',
+      createAccount: 'Créer un compte',
+      fillAllFields: 'Veuillez remplir tous les champs',
+      loginSuccess: 'Succès',
+      loginSuccessMessage: 'Connexion réussie! Redirection...',
+      loginFailed: 'Échec de la connexion. Veuillez réessayer.'
+    },
+    de: {
+      welcomeBack: 'Willkommen zurück',
+      welcomeSubtitle: 'Melden Sie sich an, um auf Ihre OCBC-Bankdienstleistungen zuzugreifen',
+      emailLabel: 'E-Mail-Adresse:',
+      emailPlaceholder: 'sie@beispiel.com',
+      passwordLabel: 'Passwort:',
+      passwordPlaceholder: 'Geben Sie Ihr Passwort ein',
+      rememberMe: 'Auf diesem Gerät an mich erinnern',
+      loginButton: 'Anmelden',
+      newToOCBC: 'Neu bei OCBC? ',
+      createAccount: 'Konto erstellen',
+      fillAllFields: 'Bitte füllen Sie alle Felder aus',
+      loginSuccess: 'Erfolg',
+      loginSuccessMessage: 'Anmeldung erfolgreich! Weiterleitung...',
+      loginFailed: 'Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.'
+    }
+  };
+
+  const t = translations[selectedLanguage as keyof typeof translations] || translations.en;
+
+  useEffect(() => {
+    loadSavedLanguage();
+  }, []);
+
+  const loadSavedLanguage = async () => {
+    try {
+      const savedLang = await AsyncStorage.getItem('selectedLanguage');
+      if (savedLang) {
+        setSelectedLanguage(savedLang);
+      }
+    } catch (error) {
+      console.log('Error loading language:', error);
+    }
+  };
 
   const handleLogin = async () => {
     if (!email || !password) {
-      setErrorMessage('Please fill in all fields');
+      setErrorMessage(t.fillAllFields);
       return;
     }
 
@@ -80,7 +262,7 @@ const LoginScreen = () => {
         }
 
         setLoading(false);
-        Alert.alert('Success', 'Login successful! Redirecting...', [
+        Alert.alert(t.loginSuccess, t.loginSuccessMessage, [
           {
             text: 'OK',
             onPress: () => router.replace('/homepage'),
@@ -90,13 +272,13 @@ const LoginScreen = () => {
     } catch (error) {
       setLoading(false);
       setErrorMessage(
-        error instanceof Error ? error.message : 'Login failed. Please try again.'
+        error instanceof Error ? error.message : t.loginFailed
       );
     }
   };
 
   const handleSignUp = () => {
-    router.push('/SignupScreen');
+    router.push('/signup');
   };
 
   const handleBack = () => {
@@ -146,9 +328,9 @@ const LoginScreen = () => {
 
           {/* Welcome Section */}
           <View style={styles.welcomeSection}>
-            <Text style={styles.welcomeTitle}>Welcome Back</Text>
+            <Text style={styles.welcomeTitle}>{t.welcomeBack}</Text>
             <Text style={styles.welcomeSubtitle}>
-              Log in to access your OCBC banking services
+              {t.welcomeSubtitle}
             </Text>
           </View>
 
@@ -164,10 +346,10 @@ const LoginScreen = () => {
           <View style={styles.form}>
             {/* Email Field */}
             <View style={styles.formGroup}>
-              <Text style={styles.label}>Email Address:</Text>
+              <Text style={styles.label}>{t.emailLabel}</Text>
               <TextInput
                 style={styles.input}
-                placeholder="you@example.com"
+                placeholder={t.emailPlaceholder}
                 value={email}
                 onChangeText={setEmail}
                 keyboardType="email-address"
@@ -179,11 +361,11 @@ const LoginScreen = () => {
 
             {/* Password Field */}
             <View style={styles.formGroup}>
-              <Text style={styles.label}>Password:</Text>
+              <Text style={styles.label}>{t.passwordLabel}</Text>
               <View style={styles.passwordContainer}>
                 <TextInput
                   style={styles.passwordInput}
-                  placeholder="Enter your password"
+                  placeholder={t.passwordPlaceholder}
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry={!showPassword}
@@ -223,7 +405,7 @@ const LoginScreen = () => {
                 )}
               </TouchableOpacity>
               <Text style={styles.checkboxLabel}>
-                Remember me on this device
+                {t.rememberMe}
               </Text>
             </View>
 
@@ -236,17 +418,17 @@ const LoginScreen = () => {
               {loading ? (
                 <ActivityIndicator size="small" color="#fff" />
               ) : (
-                <Text style={styles.buttonText}>Login</Text>
+                <Text style={styles.buttonText}>{t.loginButton}</Text>
               )}
             </TouchableOpacity>
           </View>
 
           {/* Sign Up Link */}
           <View style={styles.signupSection}>
-            <Text style={styles.signupText}>New to OCBC? </Text>
+            <Text style={styles.signupText}>{t.newToOCBC}</Text>
             <TouchableOpacity onPress={handleSignUp}>
               <Text style={[styles.link, styles.signupLink]}>
-                Create an Account
+                {t.createAccount}
               </Text>
             </TouchableOpacity>
           </View>
@@ -453,4 +635,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default LoginScreen;
+export default Login;
