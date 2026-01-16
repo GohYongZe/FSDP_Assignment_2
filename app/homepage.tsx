@@ -1,12 +1,24 @@
+import { FontAwesome } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { supabase } from '../lib/supabase';
+import GuidedTutorial, { TutorialStep } from './components/GuidedTutorial';
 
 const Homepage = () => {
   const router = useRouter();
   const [userName, setUserName] = useState<string>('');
   const [loading, setLoading] = useState(true);
+  const [showTutorial, setShowTutorial] = useState(false);
+
+  const manageAccountsButtonRef = useRef<View>(null);
+
+  const tutorialSteps: TutorialStep[] = [
+    {
+      target: manageAccountsButtonRef,
+      text: 'This button allows you to manage your linked accounts. You can add, remove, or view your connected accounts here.',
+    },
+  ];
 
   useEffect(() => {
     fetchUserData();
@@ -14,18 +26,14 @@ const Homepage = () => {
 
   const fetchUserData = async () => {
     try {
-      // Get the current authenticated user
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      
-      if (authError || !user) {
-        console.log('No authenticated user found');
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
         setUserName('Guest');
         setLoading(false);
         return;
       }
 
-      // Try to fetch from Localaccounts first
-      const { data: localData, error: localError } = await supabase
+      const { data: localData } = await supabase
         .from('Localaccounts')
         .select('name')
         .eq('emailAddress', user.email)
@@ -37,8 +45,7 @@ const Homepage = () => {
         return;
       }
 
-      // If not found in local, try Foreignaccounts
-      const { data: foreignData, error: foreignError } = await supabase
+      const { data: foreignData } = await supabase
         .from('Foreignaccounts')
         .select('name')
         .eq('emailAddress', user.email)
@@ -47,7 +54,6 @@ const Homepage = () => {
       if (foreignData && foreignData.length > 0) {
         setUserName(foreignData[0].name);
       } else {
-        // If no data found in either table, use email username
         setUserName(user.email?.split('@')[0] || 'User');
       }
 
@@ -64,24 +70,13 @@ const Homepage = () => {
       'Logout',
       'Are you sure you want to logout?',
       [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
+        { text: 'Cancel', style: 'cancel' },
         {
           text: 'Logout',
           style: 'destructive',
           onPress: async () => {
-            try {
-              const { error } = await supabase.auth.signOut();
-              if (error) {
-                Alert.alert('Error', 'Failed to logout: ' + error.message);
-              } else {
-                router.replace('/LandingScreen');
-              }
-            } catch (error) {
-              Alert.alert('Error', 'An unexpected error occurred during logout');
-            }
+            await supabase.auth.signOut();
+            router.replace('/LandingScreen');
           },
         },
       ]
@@ -98,16 +93,20 @@ const Homepage = () => {
 
   return (
     <View style={styles.container}>
+      <TouchableOpacity style={styles.helpButton} onPress={() => setShowTutorial(true)}>
+        <FontAwesome name="question-circle-o" size={30} color="#da291c" />
+      </TouchableOpacity>
       <Text style={styles.welcomeText}>Welcome,</Text>
       <Text style={styles.userName}>{userName || 'User'}</Text>
       
-      <TouchableOpacity style={styles.linkButton} onPress={() => router.push('/linkaccounts')}>
+      <TouchableOpacity ref={manageAccountsButtonRef} style={styles.linkButton} onPress={() => router.push('/linkaccounts')}>
         <Text style={styles.linkButtonText}>Manage Linked Accounts test</Text>
       </TouchableOpacity>
 
       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
         <Text style={styles.logoutButtonText}>Logout</Text>
       </TouchableOpacity>
+      {showTutorial && <GuidedTutorial steps={tutorialSteps} onClose={() => setShowTutorial(false)} />}
     </View>
   );
 };
@@ -119,6 +118,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#fff',
     padding: 20,
+  },
+  helpButton: {
+    position: 'absolute',
+    top: 50,
+    right: 20,
   },
   welcomeText: {
     fontSize: 20,
@@ -144,7 +148,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   linkButton: {
-    backgroundColor: '#007AFF', // Blue color for action
+    backgroundColor: '#007AFF',
     paddingVertical: 12,
     paddingHorizontal: 30,
     borderRadius: 8,
