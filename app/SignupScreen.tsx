@@ -927,7 +927,7 @@ const SignupScreen = () => {
           {/* Footer */}
           <View style={styles.footer}>
             <Text style={styles.footerText}>
-              By creating an account you agree to OCBC's{' '}
+              By creating an account you agree to OCBC&apos;s{' '}
               <Text
                 style={styles.footerLink}
                 onPress={() => {
