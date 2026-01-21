@@ -30,7 +30,7 @@ export default function LinkAccounts() {
 
   useEffect(() => {
     initialize();
-  }, []);
+  },);
 
   const initialize = async () => {
     setLoading(true);
@@ -55,7 +55,7 @@ export default function LinkAccounts() {
       if (!user.email) return null;
 
       // localaccounts
-      let { data: accountData, error: localError } = await supabase
+      let { data: accountData } = await supabase
         .from('Localaccounts')
         .select('*')
         .eq('emailAddress', user.email)
@@ -63,7 +63,7 @@ export default function LinkAccounts() {
 
       if (!accountData) {
         // foreignaccounts
-        let { data: foreignData, error: foreignError } = await supabase
+        let { data: foreignData } = await supabase
           .from('Foreignaccounts')
           .select('*')
           .eq('emailAddress', user.email)
@@ -287,7 +287,7 @@ export default function LinkAccounts() {
       >
         <View>
           <Text className="text-lg font-bold text-gray-800">Link a New Account</Text>
-          <Text className="text-sm text-gray-500 mt-1">Add a friend or family member's account.</Text>
+          <Text className="text-sm text-gray-500 mt-1">Add a friend or family member&apos;s account.</Text>
         </View>
         <MaterialIcons name="chevron-right" size={24} color="#9CA3AF" />
       </TouchableOpacity>

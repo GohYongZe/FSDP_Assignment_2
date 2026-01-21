@@ -737,7 +737,7 @@ const More = ({ navigation }: MoreProps) => {
         <View style={styles.bottomNav}>
           <TouchableOpacity
             style={styles.navItem}
-            onPress={() => router.push('/homepage')}
+            onPress={() => router.push('/')}
           >
             <FontAwesome5 name="home" size={22} color="#888" />
             <Text style={styles.navItemText}>{t.home}</Text>

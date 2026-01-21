@@ -1319,7 +1319,7 @@ const Signup = () => {
       Alert.alert(t.success, successMessage, [
         {
           text: t.ok,
-          onPress: () => router.replace('/homepage'),
+          onPress: () => router.replace('/landingpage'),
         },
       ]);
 

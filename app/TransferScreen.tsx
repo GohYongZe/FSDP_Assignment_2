@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome5';
 
-const TransferScreen = ({ navigation }) => {
+const TransferScreen = ({ navigation }: { navigation: any }) => {
   const recipients = [
     { id: '1', name: 'John L.', initials: 'JL', color: '#005eb8' },
     { id: '2', name: 'Mary Y.', initials: 'MY', color: '#da291c' },

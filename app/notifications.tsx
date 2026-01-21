@@ -11,7 +11,7 @@ import {
 // Note: Ensure you have 'react-native-vector-icons' installed
 import Icon from 'react-native-vector-icons/FontAwesome5';
 
-const NotificationsScreen = ({ navigation }) => {
+const NotificationsScreen = ({ navigation }: { navigation: any }) => {
   // Mock Notification Data based on your HTML source
   const [notifications, setNotifications] = useState([
     { id: '1', title: "Transaction Alert", content: "S$150.00 transferred successfully to Alex B.", icon: "exchange-alt", time: "5 mins ago", read: false },
@@ -26,7 +26,7 @@ const NotificationsScreen = ({ navigation }) => {
     setNotifications(updated);
   };
 
-  const handleNotificationClick = (id) => {
+  const handleNotificationClick = (id: string) => {
     const updated = notifications.map(n => 
       n.id === id ? { ...n, read: true } : n
     );
@@ -35,7 +35,7 @@ const NotificationsScreen = ({ navigation }) => {
 
   const hasUnread = notifications.some(n => !n.read);
 
-  const renderItem = ({ item }) => (
+  const renderItem = ({ item }: { item: { id: string; title: string; content: string; icon: string; time: string; read: boolean } }) => (
     <TouchableOpacity 
       style={[styles.notificationItem, !item.read && styles.unreadItem]} 
       onPress={() => handleNotificationClick(item.id)}
@@ -81,7 +81,7 @@ const NotificationsScreen = ({ navigation }) => {
       ) : (
         <View style={styles.emptyState}>
           <Icon name="check-circle" size={40} color="#ccc" />
-          <Text style={styles.emptyText}>You're all caught up! No new notifications.</Text>
+          <Text style={styles.emptyText}>You&apos;re all caught up! No new notifications.</Text>
         </View>
       )}
     </SafeAreaView>

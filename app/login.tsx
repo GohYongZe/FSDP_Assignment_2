@@ -234,7 +234,7 @@ const Login = () => {
       if (data.user) {
         // Fetch user data from database
         // Try local accounts first
-        const { data: localData, error: localError } = await supabase
+        const { data: localData } = await supabase
           .from('Localaccounts')
           .select('*')
           .eq('emailAddress', email);
@@ -245,7 +245,7 @@ const Login = () => {
           userData = localData;
         } else {
           // Try foreign accounts
-          const { data: foreignData, error: foreignError } = await supabase
+          const { data: foreignData } = await supabase
             .from('Foreignaccounts')
             .select('*')
             .eq('emailAddress', email);
@@ -265,7 +265,7 @@ const Login = () => {
         Alert.alert(t.loginSuccess, t.loginSuccessMessage, [
           {
             text: 'OK',
-            onPress: () => router.replace('/homepage'),
+            onPress: () => router.replace('/landingpage'),
           },
         ]);
       }
