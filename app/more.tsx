@@ -571,16 +571,16 @@ const More = ({ navigation }: MoreProps) => {
     );
   };
 
-const handleLogout = () => {
-  Alert.alert("Logout", "Are you sure you want to logout?", [
-    { text: "Cancel", style: "cancel" },
-    {
-      text: "Logout",
-      style: "destructive",
-      onPress: () => router.replace("/landing"),
-    },
-  ]);
-};
+  const handleLogout = () => {
+    Alert.alert("Logout", "Are you sure you want to logout?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Logout",
+        style: "destructive",
+        onPress: () => router.replace("/landing"),
+      },
+    ]);
+  };
 
   // All menu items with their categories
   const allMenuItems: MenuItem[] = [
