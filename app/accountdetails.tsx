@@ -49,6 +49,7 @@ const AccountDetailsScreen = ({
             await supabase.auth.signOut();
             router.replace("/landing");
           } catch (error) {
+            console.error("Error logging out:", error);
             Alert.alert("Error", "Failed to logout");
           }
         },

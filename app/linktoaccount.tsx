@@ -59,7 +59,8 @@ export default function LinkToAccount() {
           } else {
               Alert.alert("Invalid QR", "This QR code does not contain account info.");
           }
-      } catch (e) {
+      } catch (err) {
+          console.error("Error parsing QR:", err);
           Alert.alert("Error", "Could not parse QR code data.");
       }
   };

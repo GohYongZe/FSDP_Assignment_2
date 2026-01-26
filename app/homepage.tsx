@@ -14,6 +14,7 @@ import {
   View,
 } from "react-native";
 import { supabase } from "../lib/supabase";
+import { ExpoSpeechRecognitionModule, useSpeechRecognitionEvent } from "@jamsch/expo-speech-recognition";
 
 interface Account {
   id: string;
@@ -41,85 +42,124 @@ export default function HomePage() {
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
   const [showAccountModal, setShowAccountModal] = useState(false);
 
-  // qr scanning 
+  // QR scanning
   const [showScanner, setShowScanner] = useState(false);
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
+
+  // Cobi States
+  const [isCobiListening, setIsCobiListening] = useState(false);
+  const [spokenText, setSpokenText] = useState("");
 
   useEffect(() => {
     fetchUserData();
   }, []);
 
+  // Cobi Event Listeners
+  useSpeechRecognitionEvent("result", (event) => {
+    const transcript = event.results[0]?.transcript;
+    if (transcript) {
+      setSpokenText(transcript);
+      if (event.isFinal) {
+        processCommandWithCobi(transcript);
+      }
+    }
+  });
+
+  useSpeechRecognitionEvent("error", (event) => {
+    console.error("Cobi Voice Error:", event.error, event.message);
+    setIsCobiListening(false);
+  });
+
+  useSpeechRecognitionEvent("end", () => {
+    setIsCobiListening(false);
+  });
+
   const handleStartScan = () => {
-      if (!permission) {
-          requestPermission();
-          return;
-      }
-      if (!permission.granted) {
-          Alert.alert("Permission", "Camera permission is required to scan QR codes.");
-          requestPermission();
-          return;
-      }
-      setScanned(false);
-      setShowScanner(true);
+    if (!permission) {
+      requestPermission();
+      return;
+    }
+    if (!permission.granted) {
+      Alert.alert(
+        "Permission",
+        "Camera permission is required to scan QR codes."
+      );
+      requestPermission();
+      return;
+    }
+    setScanned(false);
+    setShowScanner(true);
   };
 
-  const handleBarCodeScanned = ({ type, data }: { type: string, data: string }) => {
+  const handleBarCodeScanned = ({
+    type,
+    data,
+  }: {
+    type: string;
+    data: string;
+  }) => {
     // Prevent multiple scans
     if (scanned) return;
     setScanned(true);
-    // Don't close immediately to avoid jarring transitions, or close if we show an alert.
-    
-    try {
-        const parsed = JSON.parse(data);
-        console.log("Scanned QR:", parsed);
-        setShowScanner(false); // Close now
 
-        if (parsed.type === 'request') {
-            // Payment Request
-            if (parsed.accountNo && parsed.amount) {
-                Alert.alert(
-                    "Payment Request", 
-                    `Do you want to pay SGD ${parsed.amount} to ${parsed.accountNo}?`,
-                    [
-                        { text: "Cancel", style: "cancel" },
-                        { text: "Pay", onPress: () => {
-                            router.push({
-                                pathname: "/twotappay",
-                                params: {
-                                    accountNo: parsed.accountNo,
-                                    nickName: parsed.name || 'Quick Pay',
-                                    amount: parsed.amount // Pass amount to pre-select
-                                }
-                            });
-                        }}
-                    ]
-                );
-            }
-        } else if (parsed.accountNo) {
-            // Link Request (Standard Profile QR)
-            Alert.alert(
-                "Link Account", 
-                `Found account: ${parsed.accountNo}. Do you want to link?`,
-                [
-                    { text: "Cancel", style: "cancel" },
-                    { text: "Link", onPress: () => {
-                        router.push({
-                            pathname: "/linktoaccount",
-                            params: {
-                                accountNo: parsed.accountNo,
-                                name: parsed.name || ''
-                            }
-                        });
-                    }}
-                ]
-            );
-        } else {
-            Alert.alert("Invalid QR", "This QR code is not recognized.");
+    try {
+      const parsed = JSON.parse(data);
+      console.log("Scanned QR:", parsed);
+      setShowScanner(false); // Close now
+
+      if (parsed.type === "request") {
+        // Payment Request
+        if (parsed.accountNo && parsed.amount) {
+          Alert.alert(
+            "Payment Request",
+            `Do you want to pay SGD ${parsed.amount} to ${parsed.accountNo}?`,
+            [
+              { text: "Cancel", style: "cancel" },
+              {
+                text: "Pay",
+                onPress: () => {
+                  router.push({
+                    pathname: "/twotappay",
+                    params: {
+                      accountNo: parsed.accountNo,
+                      nickName: parsed.name || "Quick Pay",
+                      amount: parsed.amount, // Pass amount to pre-select
+                    },
+                  });
+                },
+              },
+            ]
+          );
         }
-    } catch (e) {
-        setShowScanner(false);
-        Alert.alert("Error", "Could not parse QR code.");
+      } else if (parsed.accountNo) {
+        // Link Request (Standard Profile QR)
+        Alert.alert(
+          "Link Account",
+          `Found account: ${parsed.accountNo}. Do you want to link?`,
+          [
+            { text: "Cancel", style: "cancel" },
+            {
+              text: "Link",
+              onPress: () => {
+                router.push({
+                  pathname: "/linktoaccount",
+                  params: {
+                    accountNo: parsed.accountNo,
+                    name: parsed.name || "",
+                  },
+                });
+              },
+            },
+          ]
+        );
+      } else {
+        Alert.alert("Invalid QR", "This QR code is not recognized.");
+      }
+    } catch (err) {
+      console.error("Error parsing QR:", err);
+      setShowScanner(false);
+      Alert.alert("Error", "Could not parse QR code.");
     }
   };
 
@@ -143,7 +183,7 @@ export default function HomePage() {
       // Fetch all accounts for this email
       const allAccounts: Account[] = [];
 
-      // Fetch from Localaccounts - Try different possible column name variations
+      // Fetch from Localaccounts
       console.log("Attempting to fetch from Localaccounts table...");
       const { data: localData, error: localError } = await supabase
         .from("Localaccounts")
@@ -159,7 +199,7 @@ export default function HomePage() {
         console.log(
           "Error fetching local accounts:",
           localError.message,
-          localError.details,
+          localError.details
         );
       }
 
@@ -219,7 +259,7 @@ export default function HomePage() {
         console.log(
           "Error fetching foreign accounts:",
           foreignError.message,
-          foreignError.details,
+          foreignError.details
         );
       }
 
@@ -277,7 +317,7 @@ export default function HomePage() {
         Alert.alert(
           "No Accounts Found",
           "No bank accounts are linked to this email. Please contact support or create an account.",
-          [{ text: "OK" }],
+          [{ text: "OK" }]
         );
       }
 
@@ -317,6 +357,47 @@ export default function HomePage() {
         },
       },
     ]);
+  };
+
+  // Cobi Handlers
+  const handleCobiPress = async () => {
+    if (isCobiListening) {
+      ExpoSpeechRecognitionModule.stop();
+      setIsCobiListening(false);
+    } else {
+      const result = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
+      // Robust permission check for Android and iOS
+      if (result.status !== "granted" && !result.granted) {
+        Alert.alert(
+          "Permission Denied",
+          "Cobi needs microphone access to help you."
+        );
+        return;
+      }
+
+      setSpokenText("");
+      setIsCobiListening(true);
+      // Continuous mode keeps the mic active for longer sentences
+      ExpoSpeechRecognitionModule.start({
+        lang: "en-US",
+        continuous: true,
+        interimResults: true,
+      });
+    }
+  };
+
+  const processCommandWithCobi = async (text: string) => {
+    try {
+      const { data } = await supabase.functions.invoke("cobi-assistant", {
+        body: { query: text, userName: userName },
+      });
+      if (data?.message) {
+        Alert.alert("Cobi", data.message);
+        fetchUserData(); // Refresh dashboard balance after transaction
+      }
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   if (loading) {
@@ -391,7 +472,6 @@ export default function HomePage() {
             </TouchableOpacity>
             <Text className="text-xs text-gray-600">Scan</Text>
           </View>
-          {/* Additional icons can be added here following the same pattern */}
         </View>
 
         {/* Account Tabs */}
@@ -543,6 +623,58 @@ export default function HomePage() {
         </View>
       </Modal>
 
+      {/* Camera Modal */}
+      <Modal
+        visible={showScanner}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowScanner(false)}
+      >
+        <View className="flex-1 bg-black">
+          <CameraView
+            style={{ flex: 1 }}
+            facing="back"
+            onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
+          />
+          <View className="absolute top-0 left-0 right-0 p-12 items-center">
+            <Text className="text-white text-lg font-bold bg-black/50 p-2 rounded-lg overflow-hidden">
+              Scan QR Code
+            </Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => setShowScanner(false)}
+            className="absolute top-4 right-4 bg-white/20 p-2 rounded-full"
+          >
+            <FontAwesome6 name="xmark" size={24} color="white" />
+          </TouchableOpacity>
+        </View>
+      </Modal>
+
+      {/* Floating Cobi Button */}
+      <TouchableOpacity
+        onPress={handleCobiPress}
+        style={[
+          styles.cobiButton,
+          { backgroundColor: isCobiListening ? "#da291c" : "#0066cc" },
+        ]}
+      >
+        <FontAwesome6
+          name={isCobiListening ? "microphone" : "wand-magic-sparkles"}
+          size={24}
+          color="white"
+        />
+      </TouchableOpacity>
+
+      {/* Cobi Listening Popup */}
+      {isCobiListening && (
+        <View style={styles.cobiPopup}>
+          <Text style={styles.cobiTitle}>Cobi Assistant</Text>
+          <Text style={styles.cobiText}>
+            {spokenText || "Listening..."}
+          </Text>
+        </View>
+      )}
+
       {/* Bottom Navigation */}
       <View style={styles.bottomNav}>
         <TouchableOpacity
@@ -569,31 +701,6 @@ export default function HomePage() {
           <Text style={styles.navItemText}>More</Text>
         </TouchableOpacity>
       </View>
-
-      {/* Camera Modal */}
-      <Modal
-        visible={showScanner}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => setShowScanner(false)}
-      >
-        <View className="flex-1 bg-black">
-            <CameraView
-                style={{ flex: 1 }}
-                facing="back"
-                onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
-            />
-            <View className="absolute top-0 left-0 right-0 p-12 items-center">
-                 <Text className="text-white text-lg font-bold bg-black/50 p-2 rounded-lg overflow-hidden">Scan QR Code</Text>
-            </View>
-            <TouchableOpacity 
-                onPress={() => setShowScanner(false)}
-                className="absolute top-4 right-4 bg-white/20 p-2 rounded-full"
-            >
-                <FontAwesome6 name="xmark" size={24} color="white" />
-            </TouchableOpacity>
-        </View>
-      </Modal>
     </View>
   );
 }
@@ -700,5 +807,47 @@ const styles = StyleSheet.create({
   accountNumber: {
     fontSize: 12,
     color: "#999",
+  },
+  cobiButton: {
+    position: "absolute",
+    bottom: 96,
+    right: 24,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  cobiPopup: {
+    position: "absolute",
+    bottom: 170,
+    right: 24,
+    backgroundColor: "#fff",
+    padding: 16,
+    borderRadius: 16,
+    width: 256,
+    borderWidth: 1,
+    borderColor: "#e3f2fd",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  cobiTitle: {
+    fontWeight: "bold",
+    color: "#0066cc",
+    marginBottom: 4,
+    fontSize: 14,
+  },
+  cobiText: {
+    fontStyle: "italic",
+    fontSize: 12,
+    color: "#666",
   },
 });
