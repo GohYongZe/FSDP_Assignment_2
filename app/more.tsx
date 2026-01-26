@@ -92,7 +92,6 @@ const More = ({ navigation }: MoreProps) => {
       changeLanguage: "Change Language",
       notifications: "Notifications",
       security: "Security & Privacy",
-      enableEyeTracker: "Enable Eye Tracker",
       contactBank: "Contact Bank",
       faqs: "FAQs",
       guidedTutorials: "Guided Tutorials",
@@ -141,7 +140,6 @@ const More = ({ navigation }: MoreProps) => {
       changeLanguage: "更改语言",
       notifications: "通知",
       security: "安全与隐私",
-      enableEyeTracker: "启用眼动追踪",
       contactBank: "联系银行",
       faqs: "常见问题",
       guidedTutorials: "新手教程",
@@ -190,7 +188,6 @@ const More = ({ navigation }: MoreProps) => {
       changeLanguage: "Tukar Bahasa",
       notifications: "Notifikasi",
       security: "Keselamatan & Privasi",
-      enableEyeTracker: "Aktifkan Penjejak Mata",
       contactBank: "Hubungi Bank",
       faqs: "Soalan Lazim",
       guidedTutorials: "Tutorial Berpandu",
@@ -239,7 +236,6 @@ const More = ({ navigation }: MoreProps) => {
       changeLanguage: "மொழியை மாற்று",
       notifications: "அறிவிப்புகள்",
       security: "பாதுகாப்பு & தனியுரிமை",
-      enableEyeTracker: "கண் டிராக்கரை இயக்கு",
       contactBank: "வங்கியைத் தொடர்பு கொள்ளுங்கள்",
       faqs: "அடிக்கடி கேட்கப்படும் கேள்விகள்",
       guidedTutorials: "வழிகாட்டப்பட்ட பயிற்சிகள்",
@@ -288,7 +284,6 @@ const More = ({ navigation }: MoreProps) => {
       changeLanguage: "भाषा बदलें",
       notifications: "सूचनाएं",
       security: "सुरक्षा और गोपनीयता",
-      enableEyeTracker: "आई ट्रैकर सक्षम करें",
       contactBank: "बैंक से संपर्क करें",
       faqs: "अक्सर पूछे जाने वाले प्रश्न",
       guidedTutorials: "निर्देशित ट्यूटोरियल",
@@ -337,7 +332,6 @@ const More = ({ navigation }: MoreProps) => {
       changeLanguage: "言語の変更",
       notifications: "通知",
       security: "セキュリティとプライバシー",
-      enableEyeTracker: "アイ トラッカーを有効にする",
       contactBank: "銀行に連絡",
       faqs: "よくある質問",
       guidedTutorials: "ガイド付きチュートリアル",
@@ -386,7 +380,6 @@ const More = ({ navigation }: MoreProps) => {
       changeLanguage: "언어 변경",
       notifications: "알림",
       security: "보안 및 개인정보",
-      enableEyeTracker: "아이 트래커 활성화",
       contactBank: "은행 연락",
       faqs: "자주 묻는 질문",
       guidedTutorials: "가이드 튜토리얼",
@@ -435,7 +428,6 @@ const More = ({ navigation }: MoreProps) => {
       changeLanguage: "Cambiar idioma",
       notifications: "Notificaciones",
       security: "Seguridad y privacidad",
-      enableEyeTracker: "Habilitar rastreador ocular",
       contactBank: "Contactar banco",
       faqs: "Preguntas frecuentes",
       guidedTutorials: "Tutoriales guiados",
@@ -484,7 +476,6 @@ const More = ({ navigation }: MoreProps) => {
       changeLanguage: "Changer de langue",
       notifications: "Notifications",
       security: "Sécurité et confidentialité",
-      enableEyeTracker: "Activer le suivi oculaire",
       contactBank: "Contacter la banque",
       faqs: "FAQ",
       guidedTutorials: "Tutoriels guidés",
@@ -533,7 +524,6 @@ const More = ({ navigation }: MoreProps) => {
       changeLanguage: "Sprache ändern",
       notifications: "Benachrichtigungen",
       security: "Sicherheit & Datenschutz",
-      enableEyeTracker: "Eye-Tracker aktivieren",
       contactBank: "Bank kontaktieren",
       faqs: "Häufig gestellte Fragen",
       guidedTutorials: "Geführte Tutorials",
@@ -686,13 +676,6 @@ const More = ({ navigation }: MoreProps) => {
       category: t.settings,
       route: "/linkaccounts",
     },
-    {
-      id: "19",
-      icon: "eye",
-      label: t.enableEyeTracker,
-      category: t.settings,
-      route: "EyeTracker",
-    },
 
     // Help & Support
     {
@@ -763,11 +746,6 @@ const More = ({ navigation }: MoreProps) => {
     <View key={category} style={styles.section}>
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>{category}</Text>
-        <TouchableOpacity
-          onPress={() => Alert.alert(t.viewMore, `${t.viewMore} ${category}`)}
-        >
-          <Text style={styles.viewMore}>{t.viewMore}</Text>
-        </TouchableOpacity>
       </View>
       <View style={styles.iconGrid}>
         {items.map((item) => renderMenuItem(item))}
@@ -987,11 +965,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "700",
     color: "#333",
-  },
-  viewMore: {
-    fontSize: 13,
-    color: "#005eb8",
-    fontWeight: "500",
   },
   iconGrid: {
     flexDirection: "row",
