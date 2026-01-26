@@ -847,7 +847,7 @@ const handleLogout = () => {
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.navItem}
-            onPress={() => router.push("/TransferScreen")}
+            onPress={() => router.push("/transferscreen")}
           >
             <FontAwesome5 name="exchange-alt" size={22} color="#888" />
             <Text style={styles.navItemText}>{t.payTransfer}</Text>

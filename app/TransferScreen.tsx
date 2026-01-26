@@ -1,3 +1,4 @@
+
 import { useRouter } from "expo-router";
 import React from "react";
 import {
@@ -111,7 +112,7 @@ const TransferScreen = ({ navigation }: { navigation: any }) => {
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.navItem}
-          onPress={() => router.push("/TransferScreen")}
+          onPress={() => router.push("/transferscreen")}
         >
           <Icon name="exchange-alt" size={20} color="#da291c" />
           <Text
