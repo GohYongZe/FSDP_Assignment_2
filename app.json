@@ -53,13 +53,6 @@
             "backgroundColor": "#000000"
           }
         }
-      ],
-      [
-        "@jamsch/expo-speech-recognition",
-        {
-          "microphonePermission": "Allow Cobi to access the microphone to process your requests.",
-          "speechRecognitionPermission": "Allow Cobi to recognize your voice commands."
-        }
       ]
     ],
     "experiments": {

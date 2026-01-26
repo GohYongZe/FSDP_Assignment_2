@@ -3,8 +3,6 @@ import { Link, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, ImageBackground, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { supabase } from '../lib/supabase';
-// Import the new Expo-compatible voice library
-import { ExpoSpeechRecognitionModule, useSpeechRecognitionEvent } from "@jamsch/expo-speech-recognition";
 
 export default function HomePage() {
   const router = useRouter();
@@ -15,32 +13,13 @@ export default function HomePage() {
   const [userName, setUserName] = useState<string>('');
   const [loading, setLoading] = useState(true);
 
-  // Cobi Assistant State
+  // Cobi Assistant State (Simulated)
   const [isCobiListening, setIsCobiListening] = useState(false);
   const [spokenText, setSpokenText] = useState('');
 
   useEffect(() => {
     fetchUserData();
   }, []);
-
-  // --- COBI VOICE LISTENERS ---
-  useSpeechRecognitionEvent("result", (event) => {
-    const transcript = event.results[0]?.transcript;
-    if (transcript) {
-      setSpokenText(transcript);
-      // Automatically send the text to your Supabase "Brain"
-      processCommandWithCobi(transcript);
-    }
-  });
-
-  useSpeechRecognitionEvent("error", (event) => {
-    console.error("Cobi Voice Error:", event.error, event.message);
-    setIsCobiListening(false);
-  });
-
-  useSpeechRecognitionEvent("end", () => {
-    setIsCobiListening(false);
-  });
 
   // --- LOGIC FUNCTIONS ---
 
@@ -72,21 +51,7 @@ export default function HomePage() {
   };
 
   const handleCobiPress = async () => {
-    if (isCobiListening) {
-      ExpoSpeechRecognitionModule.stop();
-      setIsCobiListening(false);
-    } else {
-      // Request permissions before starting
-      const result = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
-      if (!result.granted) {
-        Alert.alert("Permission Denied", "Cobi needs microphone access to help you.");
-        return;
-      }
-
-      setSpokenText('');
-      setIsCobiListening(true);
-      ExpoSpeechRecognitionModule.start({ lang: "en-US" });
-    }
+    Alert.alert("Feature unavailable", "Voice assistant is currently disabled in this environment.");
   };
 
   const processCommandWithCobi = async (text: string) => {
