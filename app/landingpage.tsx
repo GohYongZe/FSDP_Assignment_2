@@ -3,13 +3,21 @@ import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, ImageBackground, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { supabase } from '../lib/supabase';
+<<<<<<< HEAD
 import { ExpoSpeechRecognitionModule, useSpeechRecognitionEvent } from "@jamsch/expo-speech-recognition";
+=======
+>>>>>>> 853b5eb9a8c796bf059702a838e5ff1208a9175e
 
 export default function HomePage() {
   const router = useRouter();
   const [isHidden, setIsHidden] = useState(true);
   const [userName, setUserName] = useState<string>('');
   const [loading, setLoading] = useState(true);
+<<<<<<< HEAD
+=======
+
+  // Cobi Assistant State (Simulated)
+>>>>>>> 853b5eb9a8c796bf059702a838e5ff1208a9175e
   const [isCobiListening, setIsCobiListening] = useState(false);
   const [spokenText, setSpokenText] = useState('');
 
@@ -17,6 +25,7 @@ export default function HomePage() {
     fetchUserData();
   }, []);
 
+<<<<<<< HEAD
   // VOICE EVENT LISTENERS
   useSpeechRecognitionEvent("result", (event) => {
     const transcript = event.results[0]?.transcript;
@@ -39,6 +48,10 @@ export default function HomePage() {
   });
 
   // LOGIC FUNCTIONS
+=======
+  // --- LOGIC FUNCTIONS ---
+
+>>>>>>> 853b5eb9a8c796bf059702a838e5ff1208a9175e
   const fetchUserData = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -50,6 +63,7 @@ export default function HomePage() {
   };
 
   const handleCobiPress = async () => {
+<<<<<<< HEAD
     if (isCobiListening) {
       ExpoSpeechRecognitionModule.stop();
       setIsCobiListening(false);
@@ -70,6 +84,9 @@ export default function HomePage() {
         interimResults: true 
       });
     }
+=======
+    Alert.alert("Feature unavailable", "Voice assistant is currently disabled in this environment.");
+>>>>>>> 853b5eb9a8c796bf059702a838e5ff1208a9175e
   };
 
   const processCommandWithCobi = async (text: string) => {
