@@ -41,7 +41,7 @@ export default function HomePage() {
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
   const [showAccountModal, setShowAccountModal] = useState(false);
 
-  // qr scanning 
+  // qr scanning
   const [showScanner, setShowScanner] = useState(false);
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
@@ -51,75 +51,90 @@ export default function HomePage() {
   }, []);
 
   const handleStartScan = () => {
-      if (!permission) {
-          requestPermission();
-          return;
-      }
-      if (!permission.granted) {
-          Alert.alert("Permission", "Camera permission is required to scan QR codes.");
-          requestPermission();
-          return;
-      }
-      setScanned(false);
-      setShowScanner(true);
+    if (!permission) {
+      requestPermission();
+      return;
+    }
+    if (!permission.granted) {
+      Alert.alert(
+        "Permission",
+        "Camera permission is required to scan QR codes.",
+      );
+      requestPermission();
+      return;
+    }
+    setScanned(false);
+    setShowScanner(true);
   };
 
-  const handleBarCodeScanned = ({ type, data }: { type: string, data: string }) => {
+  const handleBarCodeScanned = ({
+    type,
+    data,
+  }: {
+    type: string;
+    data: string;
+  }) => {
     // Prevent multiple scans
     if (scanned) return;
     setScanned(true);
     // Don't close immediately to avoid jarring transitions, or close if we show an alert.
-    
-    try {
-        const parsed = JSON.parse(data);
-        console.log("Scanned QR:", parsed);
-        setShowScanner(false); // Close now
 
-        if (parsed.type === 'request') {
-            // Payment Request
-            if (parsed.accountNo && parsed.amount) {
-                Alert.alert(
-                    "Payment Request", 
-                    `Do you want to pay SGD ${parsed.amount} to ${parsed.accountNo}?`,
-                    [
-                        { text: "Cancel", style: "cancel" },
-                        { text: "Pay", onPress: () => {
-                            router.push({
-                                pathname: "/twotappay",
-                                params: {
-                                    accountNo: parsed.accountNo,
-                                    nickName: parsed.name || 'Quick Pay',
-                                    amount: parsed.amount // Pass amount to pre-select
-                                }
-                            });
-                        }}
-                    ]
-                );
-            }
-        } else if (parsed.accountNo) {
-            // Link Request (Standard Profile QR)
-            Alert.alert(
-                "Link Account", 
-                `Found account: ${parsed.accountNo}. Do you want to link?`,
-                [
-                    { text: "Cancel", style: "cancel" },
-                    { text: "Link", onPress: () => {
-                        router.push({
-                            pathname: "/linktoaccount",
-                            params: {
-                                accountNo: parsed.accountNo,
-                                name: parsed.name || ''
-                            }
-                        });
-                    }}
-                ]
-            );
-        } else {
-            Alert.alert("Invalid QR", "This QR code is not recognized.");
+    try {
+      const parsed = JSON.parse(data);
+      console.log("Scanned QR:", parsed);
+      setShowScanner(false); // Close now
+
+      if (parsed.type === "request") {
+        // Payment Request
+        if (parsed.accountNo && parsed.amount) {
+          Alert.alert(
+            "Payment Request",
+            `Do you want to pay SGD ${parsed.amount} to ${parsed.accountNo}?`,
+            [
+              { text: "Cancel", style: "cancel" },
+              {
+                text: "Pay",
+                onPress: () => {
+                  router.push({
+                    pathname: "/twotappay",
+                    params: {
+                      accountNo: parsed.accountNo,
+                      nickName: parsed.name || "Quick Pay",
+                      amount: parsed.amount, // Pass amount to pre-select
+                    },
+                  });
+                },
+              },
+            ],
+          );
         }
+      } else if (parsed.accountNo) {
+        // Link Request (Standard Profile QR)
+        Alert.alert(
+          "Link Account",
+          `Found account: ${parsed.accountNo}. Do you want to link?`,
+          [
+            { text: "Cancel", style: "cancel" },
+            {
+              text: "Link",
+              onPress: () => {
+                router.push({
+                  pathname: "/linktoaccount",
+                  params: {
+                    accountNo: parsed.accountNo,
+                    name: parsed.name || "",
+                  },
+                });
+              },
+            },
+          ],
+        );
+      } else {
+        Alert.alert("Invalid QR", "This QR code is not recognized.");
+      }
     } catch (e) {
-        setShowScanner(false);
-        Alert.alert("Error", "Could not parse QR code.");
+      setShowScanner(false);
+      Alert.alert("Error", "Could not parse QR code.");
     }
   };
 
@@ -375,7 +390,7 @@ export default function HomePage() {
           <View className="items-center">
             <TouchableOpacity
               className="bg-gray-100 p-3 rounded-full mb-1"
-              onPress={() => router.push("/transferscreen")}
+              onPress={() => router.push("/TransferScreen")}
             >
               <FontAwesome6 name="comment-dollar" size={20} color="black" />
             </TouchableOpacity>
@@ -556,7 +571,7 @@ export default function HomePage() {
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.navItem}
-          onPress={() => router.push("/transferscreen")}
+          onPress={() => router.push("/TransferScreen")}
         >
           <FontAwesome5 name="exchange-alt" size={22} color="#888" />
           <Text style={styles.navItemText}>Pay & Transfer</Text>
@@ -578,20 +593,22 @@ export default function HomePage() {
         onRequestClose={() => setShowScanner(false)}
       >
         <View className="flex-1 bg-black">
-            <CameraView
-                style={{ flex: 1 }}
-                facing="back"
-                onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
-            />
-            <View className="absolute top-0 left-0 right-0 p-12 items-center">
-                 <Text className="text-white text-lg font-bold bg-black/50 p-2 rounded-lg overflow-hidden">Scan QR Code</Text>
-            </View>
-            <TouchableOpacity 
-                onPress={() => setShowScanner(false)}
-                className="absolute top-4 right-4 bg-white/20 p-2 rounded-full"
-            >
-                <FontAwesome6 name="xmark" size={24} color="white" />
-            </TouchableOpacity>
+          <CameraView
+            style={{ flex: 1 }}
+            facing="back"
+            onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
+          />
+          <View className="absolute top-0 left-0 right-0 p-12 items-center">
+            <Text className="text-white text-lg font-bold bg-black/50 p-2 rounded-lg overflow-hidden">
+              Scan QR Code
+            </Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => setShowScanner(false)}
+            className="absolute top-4 right-4 bg-white/20 p-2 rounded-full"
+          >
+            <FontAwesome6 name="xmark" size={24} color="white" />
+          </TouchableOpacity>
         </View>
       </Modal>
     </View>

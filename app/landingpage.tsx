@@ -96,7 +96,7 @@ export default function HomePage() {
 
         <View className="bg-white mx-4 -mt-12 p-5 rounded-xl shadow-lg flex-row justify-around">
           <TouchableOpacity
-            onPress={() => router.push("/transferscreen")}
+            onPress={() => router.push("/TransferScreen")}
             className="items-center"
           >
             <View className="bg-gray-100 p-3 rounded-full mb-1">
