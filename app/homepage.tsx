@@ -1,4 +1,5 @@
 import { FontAwesome5, FontAwesome6 } from "@expo/vector-icons";
+import { CameraView, useCameraPermissions } from "expo-camera";
 import { Link, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
@@ -40,9 +41,87 @@ export default function HomePage() {
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
   const [showAccountModal, setShowAccountModal] = useState(false);
 
+  // qr scanning 
+  const [showScanner, setShowScanner] = useState(false);
+  const [permission, requestPermission] = useCameraPermissions();
+  const [scanned, setScanned] = useState(false);
+
   useEffect(() => {
     fetchUserData();
   }, []);
+
+  const handleStartScan = () => {
+      if (!permission) {
+          requestPermission();
+          return;
+      }
+      if (!permission.granted) {
+          Alert.alert("Permission", "Camera permission is required to scan QR codes.");
+          requestPermission();
+          return;
+      }
+      setScanned(false);
+      setShowScanner(true);
+  };
+
+  const handleBarCodeScanned = ({ type, data }: { type: string, data: string }) => {
+    // Prevent multiple scans
+    if (scanned) return;
+    setScanned(true);
+    // Don't close immediately to avoid jarring transitions, or close if we show an alert.
+    
+    try {
+        const parsed = JSON.parse(data);
+        console.log("Scanned QR:", parsed);
+        setShowScanner(false); // Close now
+
+        if (parsed.type === 'request') {
+            // Payment Request
+            if (parsed.accountNo && parsed.amount) {
+                Alert.alert(
+                    "Payment Request", 
+                    `Do you want to pay SGD ${parsed.amount} to ${parsed.accountNo}?`,
+                    [
+                        { text: "Cancel", style: "cancel" },
+                        { text: "Pay", onPress: () => {
+                            router.push({
+                                pathname: "/twotappay",
+                                params: {
+                                    accountNo: parsed.accountNo,
+                                    nickName: parsed.name || 'Quick Pay',
+                                    amount: parsed.amount // Pass amount to pre-select
+                                }
+                            });
+                        }}
+                    ]
+                );
+            }
+        } else if (parsed.accountNo) {
+            // Link Request (Standard Profile QR)
+            Alert.alert(
+                "Link Account", 
+                `Found account: ${parsed.accountNo}. Do you want to link?`,
+                [
+                    { text: "Cancel", style: "cancel" },
+                    { text: "Link", onPress: () => {
+                        router.push({
+                            pathname: "/linktoaccount",
+                            params: {
+                                accountNo: parsed.accountNo,
+                                name: parsed.name || ''
+                            }
+                        });
+                    }}
+                ]
+            );
+        } else {
+            Alert.alert("Invalid QR", "This QR code is not recognized.");
+        }
+    } catch (e) {
+        setShowScanner(false);
+        Alert.alert("Error", "Could not parse QR code.");
+    }
+  };
 
   const fetchUserData = async () => {
     try {
@@ -302,6 +381,16 @@ export default function HomePage() {
             </TouchableOpacity>
             <Text className="text-xs text-gray-600">PayNow</Text>
           </View>
+
+          <View className="items-center">
+            <TouchableOpacity
+              className="bg-gray-100 p-3 rounded-full mb-1"
+              onPress={handleStartScan}
+            >
+              <FontAwesome6 name="qrcode" size={20} color="black" />
+            </TouchableOpacity>
+            <Text className="text-xs text-gray-600">Scan</Text>
+          </View>
           {/* Additional icons can be added here following the same pattern */}
         </View>
 
@@ -480,6 +569,31 @@ export default function HomePage() {
           <Text style={styles.navItemText}>More</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Camera Modal */}
+      <Modal
+        visible={showScanner}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowScanner(false)}
+      >
+        <View className="flex-1 bg-black">
+            <CameraView
+                style={{ flex: 1 }}
+                facing="back"
+                onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
+            />
+            <View className="absolute top-0 left-0 right-0 p-12 items-center">
+                 <Text className="text-white text-lg font-bold bg-black/50 p-2 rounded-lg overflow-hidden">Scan QR Code</Text>
+            </View>
+            <TouchableOpacity 
+                onPress={() => setShowScanner(false)}
+                className="absolute top-4 right-4 bg-white/20 p-2 rounded-full"
+            >
+                <FontAwesome6 name="xmark" size={24} color="white" />
+            </TouchableOpacity>
+        </View>
+      </Modal>
     </View>
   );
 }

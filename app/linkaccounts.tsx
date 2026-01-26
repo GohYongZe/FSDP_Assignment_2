@@ -2,13 +2,15 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  ScrollView,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Modal,
+    ScrollView,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
+import QRCode from 'react-native-qrcode-svg';
 import { supabase } from "../lib/supabase";
 
 interface UserAccount {
@@ -34,6 +36,7 @@ export default function LinkAccounts() {
   const [linkedAccounts, setLinkedAccounts] = useState<LinkedAccount[]>([]);
   const [outgoingRequests, setOutgoingRequests] = useState<LinkedAccount[]>([]);
   const [incomingRequests, setIncomingRequests] = useState<LinkedAccount[]>([]);
+  const [showQRModal, setShowQRModal] = useState(false);
 
   const fetchAndStoreCurrentUser =
     useCallback(async (): Promise<UserAccount | null> => {
@@ -316,17 +319,43 @@ export default function LinkAccounts() {
       {/* Link New Account Button */}
       <TouchableOpacity
         onPress={() => router.push("/linktoaccount")}
-        className="bg-white p-4 rounded-xl mb-6 shadow-sm border border-gray-100 flex-row justify-between items-center"
+        className="bg-blue-50 p-4 rounded-xl mb-4 border border-blue-100 flex-row justify-between items-center"
       >
-        <View>
-          <Text className="text-lg font-bold text-gray-800">
-            Link a New Account
-          </Text>
-          <Text className="text-sm text-gray-500 mt-1">
-            Add a friend or family member&apos;s account.
-          </Text>
+        <View className="flex-row items-center">
+            <View className="w-10 h-10 bg-blue-100 rounded-full items-center justify-center mr-3">
+                <MaterialIcons name="person-add" size={24} color="#2563EB" />
+            </View>
+            <View>
+                <Text className="text-lg font-bold text-blue-900">
+                    Link New Account
+                </Text>
+                <Text className="text-xs text-blue-600">
+                    Add friend or family member
+                </Text>
+            </View>
         </View>
-        <MaterialIcons name="chevron-right" size={24} color="#9CA3AF" />
+        <MaterialIcons name="chevron-right" size={24} color="#2563EB" />
+      </TouchableOpacity>
+
+      {/* QR Code Button */}
+      <TouchableOpacity
+        onPress={() => setShowQRModal(true)}
+        className="bg-purple-50 p-4 rounded-xl mb-6 border border-purple-100 flex-row justify-between items-center"
+      >
+        <View className="flex-row items-center">
+            <View className="w-10 h-10 bg-purple-100 rounded-full items-center justify-center mr-3">
+                <MaterialIcons name="qr-code" size={24} color="#9333EA" />
+            </View>
+            <View>
+                <Text className="text-lg font-bold text-purple-900">
+                    Show My QR
+                </Text>
+                <Text className="text-xs text-purple-600">
+                    Let others scan to link
+                </Text>
+            </View>
+        </View>
+        <MaterialIcons name="chevron-right" size={24} color="#9333EA" />
       </TouchableOpacity>
 
       {/* Outgoing Requests */}
@@ -524,6 +553,42 @@ export default function LinkAccounts() {
           })
         )}
       </View>
+      {/* QR Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={showQRModal}
+        onRequestClose={() => setShowQRModal(false)}
+      >
+         <View className="flex-1 justify-center items-center bg-black/80 p-4">
+             <View className="bg-white p-8 rounded-3xl items-center w-full max-w-sm">
+                 <Text className="text-2xl font-bold mb-2 text-center text-gray-800">My Account QR</Text>
+                 <Text className="text-gray-500 mb-6 text-center">Scan this code to link with {currentUser?.name || 'me'}</Text>
+                 
+                 <View className="p-4 bg-white rounded-xl shadow-lg border border-gray-100 mb-6">
+                    {currentUser && (
+                         <QRCode 
+                            value={JSON.stringify({ 
+                                accountNo: currentUser.accountNo, 
+                                name: currentUser.name || 'Unknown' 
+                            })} 
+                            size={200} 
+                        />
+                    )}
+                 </View>
+
+                 <Text className="text-lg font-bold text-gray-800 mb-1">{currentUser?.name}</Text>
+                 <Text className="text-gray-500 mb-8">{currentUser?.accountNo}</Text>
+
+                 <TouchableOpacity 
+                    onPress={() => setShowQRModal(false)}
+                    className="bg-gray-100 py-3 px-8 rounded-full"
+                 >
+                     <Text className="font-bold text-gray-700">Close</Text>
+                 </TouchableOpacity>
+             </View>
+         </View>
+      </Modal>
     </ScrollView>
   );
 }
