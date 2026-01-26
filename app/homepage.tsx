@@ -149,6 +149,7 @@ export default function HomePage() {
             Alert.alert("Invalid QR", "This QR code is not recognized.");
         }
     } catch (e) {
+        console.error("Error parsing QR code:", e);
         setShowScanner(false);
         Alert.alert("Error", "Could not parse QR code.");
     }
@@ -447,7 +448,7 @@ export default function HomePage() {
           <View className="items-center">
             <TouchableOpacity
               className="bg-gray-100 p-3 rounded-full mb-1"
-              onPress={() => router.push("/TransferScreen")}
+              onPress={() => router.push("/transferscreen")}
             >
               <FontAwesome6 name="comment-dollar" size={20} color="black" />
             </TouchableOpacity>
@@ -679,7 +680,7 @@ export default function HomePage() {
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.navItem}
-          onPress={() => router.push("/TransferScreen")}
+          onPress={() => router.push("/transferscreen")}
         >
           <FontAwesome5 name="exchange-alt" size={22} color="#888" />
           <Text style={styles.navItemText}>Pay & Transfer</Text>
