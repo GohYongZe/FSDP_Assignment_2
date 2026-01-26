@@ -577,7 +577,7 @@ const More = ({ navigation }: MoreProps) => {
         {
           text: 'Logout',
           style: 'destructive',
-          onPress: () => router.replace('/landing'),
+          onPress: () => router.replace('/landingpage'),
         },
       ]
     );
