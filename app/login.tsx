@@ -14,7 +14,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 import { supabase } from "../lib/supabase";
 
@@ -30,7 +30,7 @@ const Login = () => {
 
   const translations = {
     en: {
-      welcomeBack: "Welcome Back",
+      welcomeBack: "Welcome Backs",
       welcomeSubtitle: "Log in to access your OCBC banking services",
       emailLabel: "Email Address:",
       emailPlaceholder: "you@example.com",
