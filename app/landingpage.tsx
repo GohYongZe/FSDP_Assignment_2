@@ -170,7 +170,7 @@ export default function HomePage() {
           </ScrollView>
         </View>
 
-        <TouchableOpacity className="bg-gray-50 mx-4 p-5 rounded-xl border border-gray-200" onPress={() => router.push('/account_details')}>
+        <TouchableOpacity className="bg-gray-50 mx-4 p-5 rounded-xl border border-gray-200" onPress={() => router.push('/accountdetails')}>
           <View className="flex-row justify-between items-center mb-4">
             <View className="flex-row items-center">
               <View className="bg-orange-300 w-10 h-10 rounded-full items-center justify-center mr-3">

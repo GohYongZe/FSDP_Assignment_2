@@ -296,7 +296,7 @@ export default function HomePage() {
           <View className="items-center">
             <TouchableOpacity
               className="bg-gray-100 p-3 rounded-full mb-1"
-              onPress={() => router.push("/transferscreen")}
+              onPress={() => router.push("/TransferScreen")}
             >
               <FontAwesome6 name="comment-dollar" size={20} color="black" />
             </TouchableOpacity>
@@ -467,7 +467,7 @@ export default function HomePage() {
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.navItem}
-          onPress={() => router.push("/transferscreen")}
+          onPress={() => router.push("/TransferScreen")}
         >
           <FontAwesome5 name="exchange-alt" size={22} color="#888" />
           <Text style={styles.navItemText}>Pay & Transfer</Text>

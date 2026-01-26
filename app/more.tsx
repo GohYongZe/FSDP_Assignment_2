@@ -571,31 +571,16 @@ const More = ({ navigation }: MoreProps) => {
     );
   };
 
-  const handleLogout = () => {
-<<<<<<< HEAD
-    Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Logout',
-          style: 'destructive',
-          onPress: () => router.replace('/landingpage'),
-        },
-      ]
-    );
-=======
-    Alert.alert("Logout", "Are you sure you want to logout?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Logout",
-        style: "destructive",
-        onPress: () => router.replace("/landing"),
-      },
-    ]);
->>>>>>> 02556a4fb64f60907d36da3a683d3985561433ab
-  };
+const handleLogout = () => {
+  Alert.alert("Logout", "Are you sure you want to logout?", [
+    { text: "Cancel", style: "cancel" },
+    {
+      text: "Logout",
+      style: "destructive",
+      onPress: () => router.replace("/landing"),
+    },
+  ]);
+};
 
   // All menu items with their categories
   const allMenuItems: MenuItem[] = [
@@ -862,7 +847,7 @@ const More = ({ navigation }: MoreProps) => {
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.navItem}
-            onPress={() => router.push("/transferscreen")}
+            onPress={() => router.push("/TransferScreen")}
           >
             <FontAwesome5 name="exchange-alt" size={22} color="#888" />
             <Text style={styles.navItemText}>{t.payTransfer}</Text>
