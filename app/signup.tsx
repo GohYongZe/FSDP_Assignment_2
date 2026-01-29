@@ -1185,7 +1185,8 @@ const Signup = () => {
   // Function to create account
   const createAccount = async (formattedPhone: string, isExistingUser: boolean, existingUserData: any) => {
     try {
-      const balance = 0;
+      // Generate random initial balance between 1000 and 5000 for new accounts
+      const balance = (Math.random() * (5000 - 1000) + 1000).toFixed(2);
       const accountNo = await generateUniqueAccountNumber(residency);
       const accountId = generateNumericAccountId();
       

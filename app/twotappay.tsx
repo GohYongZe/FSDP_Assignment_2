@@ -7,12 +7,32 @@ import QRCode from 'react-native-qrcode-svg';
 import { supabase } from '../lib/supabase';
 
 // 
-const INITIAL_BALANCE = 98.25;
-const INITIAL_TRANSACTIONS = [
-    { id: 1, name: 'CHICKEN RICE STALL', amount: -3.50, date: '10 November 2025' },
-    { id: 2, name: 'UNIQLO', amount: -10.50, date: '9 November 2025' },
-    { id: 3, name: 'NASI PADANG STALL', amount: -4.00, date: '9 November 2025' },
+const INITIAL_BALANCE = 0; // Will be fetched
+const SG_STORES = [
+    'FairPrice', 'Sheng Siong', 'Toast Box', 'Kopitiam',
+    'Don Don Donki', 'Mustafa Centre', 'Takashimaya',
+    'Cold Storage', '7-Eleven', 'Giant', 'Guardian', 'Watsons'
 ];
+
+const generateRandomTransactions = () => {
+    const transactions = [];
+    const count = 3 + Math.floor(Math.random() * 3); // 3 to 5 transactions
+
+    for (let i = 0; i < count; i++) {
+        const store = SG_STORES[Math.floor(Math.random() * SG_STORES.length)];
+        const amount = 100 + (Math.random() * 400); // Between 100 and 500
+        const date = new Date();
+        date.setDate(date.getDate() - Math.floor(Math.random() * 30));
+
+        transactions.push({
+            id: i + 1,
+            name: store,
+            amount: -parseFloat(amount.toFixed(2)),
+            date: date.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+        });
+    }
+    return transactions;
+};
 
 const DEFAULT_AMOUNTS = [5, 10, 20, 50, 100];
 
@@ -24,7 +44,8 @@ export default function TwoTapPay() {
   const accountNo = params.accountNo as string || 'Unknown Account';
 
   const [balance, setBalance] = useState(INITIAL_BALANCE);
-  const [transactions, setTransactions] = useState(INITIAL_TRANSACTIONS);
+  const [linkedBalance, setLinkedBalance] = useState<number | null>(null);
+  const [transactions, setTransactions] = useState<{ id: number; name: string; amount: number; date: string }[]>([]);
   const [buttonAmounts, setButtonAmounts] = useState<number[]>(DEFAULT_AMOUNTS);
   
   // transfer interaction
@@ -55,6 +76,9 @@ export default function TwoTapPay() {
   }, [params.amount]);
 
   useEffect(() => {
+    // Generate random transactions
+    setTransactions(generateRandomTransactions());
+
     // get current user
     // load custom amount preference
     const loadPreference = async () => {
@@ -63,18 +87,18 @@ export default function TwoTapPay() {
         const email = session.user.email;
         setCurrentUserEmail(email);
 
-        // fetch my account number
+        // fetch my account number and balance
         try {
             let { data: accountData } = await supabase
                 .from('Localaccounts')
-                .select('accountNo')
+                .select('accountNo, balance')
                 .eq('emailAddress', email)
                 .single();
             
             if (!accountData) {
                 const { data: foreignData } = await supabase
                     .from('Foreignaccounts')
-                    .select('accountNo')
+                    .select('accountNo, balance')
                     .eq('emailAddress', email)
                     .single();
                 accountData = foreignData;
@@ -82,9 +106,46 @@ export default function TwoTapPay() {
 
             if (accountData) {
                 setMyAccountNo(accountData.accountNo);
+                let fetchedBalance = parseFloat(accountData.balance);
+                // If balance is 0 or invalid (fresh account), give a random balance for demo purposes
+                if (isNaN(fetchedBalance) || fetchedBalance <= 0) {
+                    fetchedBalance = 2000 + Math.random() * 3000;
+                }
+                setBalance(fetchedBalance);
             }
         } catch (err) {
             console.error("Error fetching my account:", err);
+        }
+
+        // fetch linked account balance
+        if (accountNo && accountNo !== 'Unknown Account') {
+            try {
+                let { data: linkedData } = await supabase
+                    .from('Localaccounts')
+                    .select('balance')
+                    .eq('accountNo', accountNo)
+                    .single();
+                
+                if (!linkedData) {
+                    const { data: foreignData } = await supabase
+                        .from('Foreignaccounts')
+                        .select('balance')
+                        .eq('accountNo', accountNo)
+                        .single();
+                    linkedData = foreignData;
+                }
+                
+                if (linkedData) {
+                    let linkedBal = parseFloat(linkedData.balance);
+                    // If balance is 0 or invalid, give a random balance for demo purposes
+                    if (isNaN(linkedBal) || linkedBal <= 0) {
+                        linkedBal = 2000 + Math.random() * 3000;
+                    }
+                    setLinkedBalance(linkedBal);
+                }
+            } catch (err) {
+                console.error("Error fetching linked account:", err);
+            }
         }
 
         const storageKey = `custom_buttons_${email}_${accountNo}`;
@@ -247,17 +308,19 @@ export default function TwoTapPay() {
       // Do not reset state yet, so the modal can read 'selectedAmount'
   };
 
-  const executeTransfer = (amount: number) => {
+  const executeTransfer = async (amount: number) => {
     setIsTransferSuccessful(true);
     
     // Update balance
-    const newBalance = balance + amount;
+    const newBalance = balance - amount;
+    const newLinkedBalance = (linkedBalance || 0) + amount;
     setBalance(newBalance);
+    setLinkedBalance(newLinkedBalance);
 
-    // Create transaction
+    // Create transaction (Positive for Recipient)
     const newTransaction = {
         id: Date.now(), 
-        name: linkedName, 
+        name: linkedName, // This will appear as "Money from User" in a real scenario, but here we just list the person involved
         amount: amount,
         date: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }),
     };
@@ -269,6 +332,30 @@ export default function TwoTapPay() {
     setTimeout(() => {
         resetTransferState();
     }, 1500);
+
+    // Update database
+    if (currentUserEmail) {
+        try {
+            // Update User Balance (Decrease)
+            // Try updating Localaccounts first
+            const { error: localError, data: localData } = await supabase
+                .from('Localaccounts')
+                .update({ balance: newBalance })
+                .eq('emailAddress', currentUserEmail)
+                .select();
+
+            // If no rows were updated in Localaccounts, try Foreignaccounts
+            if (!localData || localData.length === 0) {
+               await supabase
+                .from('Foreignaccounts')
+                .update({ balance: newBalance })
+                .eq('emailAddress', currentUserEmail);
+            }
+        
+        } catch (err) {
+            console.error("Failed to update user balance in DB", err);
+        }
+    }
   };
 
   const handleModeChange = (newMode: 'pay' | 'request') => {
@@ -310,19 +397,24 @@ export default function TwoTapPay() {
         </TouchableOpacity>
       </View>
 
-      {/* linked pay info */}
-      <View className={`items-center mb-6 p-4 rounded-xl border ${mode === 'pay' ? 'bg-blue-50 border-blue-100' : 'bg-green-50 border-green-100'}`}>
+      {/* Balance (Source) */}
+      <View className="items-center mb-4">
+        <Text className="text-gray-500 text-lg mb-1">Your Balance</Text>
+        <Text className="text-4xl font-bold text-gray-900">{formatCurrency(balance)}</Text>
+      </View>
+
+      {/* linked pay info (Destination) */}
+      <View className={`items-center mb-8 p-4 rounded-xl border ${mode === 'pay' ? 'bg-blue-50 border-blue-100' : 'bg-green-50 border-green-100'}`}>
         <Text className="text-gray-500 text-xs uppercase tracking-wide mb-1 font-bold">
             {mode === 'pay' ? 'Paying to' : 'Requesting from'}
         </Text>
         <Text className="text-xl font-bold text-gray-800">{linkedName}</Text>
         <Text className="text-gray-500 text-base font-medium">{accountNo}</Text>
-      </View>
-
-      {/* Balance */}
-      <View className="items-center mb-8">
-        <Text className="text-gray-500 text-lg mb-1">Current Balance</Text>
-        <Text className="text-4xl font-bold text-gray-900">{formatCurrency(balance)}</Text>
+        {linkedBalance !== null && (
+            <Text className="text-gray-600 text-sm mt-2 font-medium">
+                Linked Balance: {formatCurrency(linkedBalance)}
+            </Text>
+        )}
       </View>
 
       {/* Instruction */}
