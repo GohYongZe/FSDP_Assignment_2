@@ -1,4 +1,5 @@
 import { FontAwesome5, FontAwesome6 } from "@expo/vector-icons";
+// import { ExpoSpeechRecognitionModule, useSpeechRecognitionEvent } from "@jamsch/expo-speech-recognition";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { Link, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
@@ -41,39 +42,74 @@ export default function HomePage() {
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
   const [showAccountModal, setShowAccountModal] = useState(false);
 
-  // qr scanning 
+  // qr scanning
   const [showScanner, setShowScanner] = useState(false);
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
+
+  // Cobi States
+  const [isCobiListening, setIsCobiListening] = useState(false);
+  const [spokenText, setSpokenText] = useState("");
 
   useEffect(() => {
     fetchUserData();
   }, []);
 
+  // Cobi Event Listeners - Disabled
+  /*
+  useSpeechRecognitionEvent("result", (event) => {
+    const transcript = event.results[0]?.transcript;
+    if (transcript) {
+      setSpokenText(transcript);
+      if (event.isFinal) {
+        processCommandWithCobi(transcript);
+      }
+    }
+  });
+
+  useSpeechRecognitionEvent("error", (event) => {
+    console.error("Cobi Voice Error:", event.error, event.message);
+    setIsCobiListening(false);
+  });
+
+  useSpeechRecognitionEvent("end", () => {
+    setIsCobiListening(false);
+  });
+  */
+
   const handleStartScan = () => {
-      if (!permission) {
-          requestPermission();
-          return;
-      }
-      if (!permission.granted) {
-          Alert.alert("Permission", "Camera permission is required to scan QR codes.");
-          requestPermission();
-          return;
-      }
-      setScanned(false);
-      setShowScanner(true);
+    if (!permission) {
+      requestPermission();
+      return;
+    }
+    if (!permission.granted) {
+      Alert.alert(
+        "Permission",
+        "Camera permission is required to scan QR codes.",
+      );
+      requestPermission();
+      return;
+    }
+    setScanned(false);
+    setShowScanner(true);
   };
 
-  const handleBarCodeScanned = ({ type, data }: { type: string, data: string }) => {
+  const handleBarCodeScanned = ({
+    type,
+    data,
+  }: {
+    type: string;
+    data: string;
+  }) => {
     // Prevent multiple scans
     if (scanned) return;
     setScanned(true);
     // Don't close immediately to avoid jarring transitions, or close if we show an alert.
-    
+
     try {
-        const parsed = JSON.parse(data);
-        console.log("Scanned QR:", parsed);
-        setShowScanner(false); // Close now
+      const parsed = JSON.parse(data);
+      console.log("Scanned QR:", parsed);
+      setShowScanner(false); // Close now
 
         if (parsed.type === 'request') {
             // Payment Request
@@ -118,6 +154,7 @@ export default function HomePage() {
             Alert.alert("Invalid QR", "This QR code is not recognized.");
         }
     } catch (e) {
+        console.error("Error parsing QR code:", e);
         setShowScanner(false);
         Alert.alert("Error", "Could not parse QR code.");
     }
@@ -131,43 +168,28 @@ export default function HomePage() {
       } = await supabase.auth.getUser();
 
       if (authError || !user) {
-        console.log("Auth error:", authError);
+        console.error("Auth error:", authError);
         setUserName("Guest");
         setLoading(false);
         return;
       }
 
-      console.log("=== FETCHING USER DATA ===");
-      console.log("Logged in user email:", user.email);
-
       // Fetch all accounts for this email
       const allAccounts: Account[] = [];
 
-      // Fetch from Localaccounts - Try different possible column name variations
+      // Fetch from Localaccounts
       console.log("Attempting to fetch from Localaccounts table...");
       const { data: localData, error: localError } = await supabase
         .from("Localaccounts")
         .select("*")
         .eq("emailAddress", user.email);
 
-      console.log("Localaccounts response:", {
-        data: localData,
-        error: localError,
-      });
-
       if (localError) {
-        console.log(
-          "Error fetching local accounts:",
-          localError.message,
-          localError.details,
-        );
+        console.error("Error fetching local accounts:", localError.message);
       }
 
       if (localData && localData.length > 0) {
-        console.log("Found local accounts:", localData);
         localData.forEach((acc: any) => {
-          console.log("Processing local account:", acc);
-
           // Check if accountType contains "+"
           const accountTypes = acc.accountType
             ? acc.accountType.split("+").map((type: string) => type.trim())
@@ -199,35 +221,19 @@ export default function HomePage() {
             });
           }
         });
-      } else {
-        console.log("No local accounts found for:", user.email);
       }
 
-      // Fetch from Foreignaccounts
-      console.log("Attempting to fetch from Foreignaccounts table...");
       const { data: foreignData, error: foreignError } = await supabase
         .from("Foreignaccounts")
         .select("*")
         .eq("emailAddress", user.email);
 
-      console.log("Foreignaccounts response:", {
-        data: foreignData,
-        error: foreignError,
-      });
-
       if (foreignError) {
-        console.log(
-          "Error fetching foreign accounts:",
-          foreignError.message,
-          foreignError.details,
-        );
+        console.error("Error fetching foreign accounts:", foreignError.message);
       }
 
       if (foreignData && foreignData.length > 0) {
-        console.log("Found foreign accounts:", foreignData);
         foreignData.forEach((acc: any) => {
-          console.log("Processing foreign account:", acc);
-
           // Check if accountType contains "+"
           const accountTypes = acc.accountType
             ? acc.accountType.split("+").map((type: string) => type.trim())
@@ -259,11 +265,8 @@ export default function HomePage() {
             });
           }
         });
-      } else {
-        console.log("No foreign accounts found for:", user.email);
       }
 
-      console.log("=== TOTAL ACCOUNTS FOUND:", allAccounts.length, "===");
       setAccounts(allAccounts);
 
       // Set the first account as default or show message
@@ -271,19 +274,17 @@ export default function HomePage() {
         setSelectedAccount(allAccounts[0]);
         setUserName(allAccounts[0].name);
       } else {
-        console.log("No accounts found - user may need to create an account");
         setUserName(user.email?.split("@")[0] || "User");
-        // Show a helpful message
         Alert.alert(
           "No Accounts Found",
           "No bank accounts are linked to this email. Please contact support or create an account.",
-          [{ text: "OK" }],
+          [{ text: "OK" }]
         );
       }
 
       setLoading(false);
     } catch (error) {
-      console.log("Unexpected error in fetchUserData:", error);
+      console.error("Error in fetchUserData:", error);
       setUserName("User");
       setLoading(false);
       Alert.alert("Error", "Failed to load account data. Please try again.");
@@ -291,7 +292,6 @@ export default function HomePage() {
   };
 
   const handleAccountSelect = (account: Account) => {
-    console.log("Switching to account:", account.name);
     setSelectedAccount(account);
     setUserName(account.name);
     setShowAccountModal(false);
@@ -317,6 +317,50 @@ export default function HomePage() {
         },
       },
     ]);
+  };
+
+  // Cobi Handlers
+  const handleCobiPress = async () => {
+    Alert.alert("Feature Unavailable", "Voice commands are currently disabled in this environment.");
+    /*
+    if (isCobiListening) {
+      ExpoSpeechRecognitionModule.stop();
+      setIsCobiListening(false);
+    } else {
+      const result = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
+      // Robust permission check for Android and iOS
+      if (result.status !== "granted" && !result.granted) {
+        Alert.alert(
+          "Permission Denied",
+          "Cobi needs microphone access to help you."
+        );
+        return;
+      }
+
+      setSpokenText("");
+      setIsCobiListening(true);
+      // Continuous mode keeps the mic active for longer sentences
+      ExpoSpeechRecognitionModule.start({
+        lang: "en-US",
+        continuous: true,
+        interimResults: true,
+      });
+    }
+    */
+  };
+
+  const processCommandWithCobi = async (text: string) => {
+    try {
+      const { data } = await supabase.functions.invoke("cobi-assistant", {
+        body: { query: text, userName: userName },
+      });
+      if (data?.message) {
+        Alert.alert("Cobi", data.message);
+        fetchUserData(); // Refresh dashboard balance after transaction
+      }
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   if (loading) {
@@ -391,7 +435,6 @@ export default function HomePage() {
             </TouchableOpacity>
             <Text className="text-xs text-gray-600">Scan</Text>
           </View>
-          {/* Additional icons can be added here following the same pattern */}
         </View>
 
         {/* Account Tabs */}
@@ -543,6 +586,58 @@ export default function HomePage() {
         </View>
       </Modal>
 
+      {/* Camera Modal */}
+      <Modal
+        visible={showScanner}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowScanner(false)}
+      >
+        <View className="flex-1 bg-black">
+          <CameraView
+            style={{ flex: 1 }}
+            facing="back"
+            onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
+          />
+          <View className="absolute top-0 left-0 right-0 p-12 items-center">
+            <Text className="text-white text-lg font-bold bg-black/50 p-2 rounded-lg overflow-hidden">
+              Scan QR Code
+            </Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => setShowScanner(false)}
+            className="absolute top-4 right-4 bg-white/20 p-2 rounded-full"
+          >
+            <FontAwesome6 name="xmark" size={24} color="white" />
+          </TouchableOpacity>
+        </View>
+      </Modal>
+
+      {/* Floating Cobi Button */}
+      <TouchableOpacity
+        onPress={handleCobiPress}
+        style={[
+          styles.cobiButton,
+          { backgroundColor: isCobiListening ? "#da291c" : "#0066cc" },
+        ]}
+      >
+        <FontAwesome6
+          name={isCobiListening ? "microphone" : "wand-magic-sparkles"}
+          size={24}
+          color="white"
+        />
+      </TouchableOpacity>
+
+      {/* Cobi Listening Popup */}
+      {isCobiListening && (
+        <View style={styles.cobiPopup}>
+          <Text style={styles.cobiTitle}>Cobi Assistant</Text>
+          <Text style={styles.cobiText}>
+            {spokenText || "Listening..."}
+          </Text>
+        </View>
+      )}
+
       {/* Bottom Navigation */}
       <View style={styles.bottomNav}>
         <TouchableOpacity
@@ -578,20 +673,22 @@ export default function HomePage() {
         onRequestClose={() => setShowScanner(false)}
       >
         <View className="flex-1 bg-black">
-            <CameraView
-                style={{ flex: 1 }}
-                facing="back"
-                onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
-            />
-            <View className="absolute top-0 left-0 right-0 p-12 items-center">
-                 <Text className="text-white text-lg font-bold bg-black/50 p-2 rounded-lg overflow-hidden">Scan QR Code</Text>
-            </View>
-            <TouchableOpacity 
-                onPress={() => setShowScanner(false)}
-                className="absolute top-4 right-4 bg-white/20 p-2 rounded-full"
-            >
-                <FontAwesome6 name="xmark" size={24} color="white" />
-            </TouchableOpacity>
+          <CameraView
+            style={{ flex: 1 }}
+            facing="back"
+            onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
+          />
+          <View className="absolute top-0 left-0 right-0 p-12 items-center">
+            <Text className="text-white text-lg font-bold bg-black/50 p-2 rounded-lg overflow-hidden">
+              Scan QR Code
+            </Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => setShowScanner(false)}
+            className="absolute top-4 right-4 bg-white/20 p-2 rounded-full"
+          >
+            <FontAwesome6 name="xmark" size={24} color="white" />
+          </TouchableOpacity>
         </View>
       </Modal>
     </View>
@@ -700,5 +797,47 @@ const styles = StyleSheet.create({
   accountNumber: {
     fontSize: 12,
     color: "#999",
+  },
+  cobiButton: {
+    position: "absolute",
+    bottom: 96,
+    right: 24,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  cobiPopup: {
+    position: "absolute",
+    bottom: 170,
+    right: 24,
+    backgroundColor: "#fff",
+    padding: 16,
+    borderRadius: 16,
+    width: 256,
+    borderWidth: 1,
+    borderColor: "#e3f2fd",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  cobiTitle: {
+    fontWeight: "bold",
+    color: "#0066cc",
+    marginBottom: 4,
+    fontSize: 14,
+  },
+  cobiText: {
+    fontStyle: "italic",
+    fontSize: 12,
+    color: "#666",
   },
 });
