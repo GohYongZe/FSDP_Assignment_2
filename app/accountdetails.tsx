@@ -1,5 +1,5 @@
 import { NavigationProp } from "@react-navigation/native";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
   Alert,
@@ -31,7 +31,13 @@ const AccountDetailsScreen = ({
   navigation: NavigationProp<any>;
 }) => {
   const router = useRouter();
+  const params = useLocalSearchParams();
   const [showAdvanced, setShowAdvanced] = useState(false);
+
+  // Get account data from params with fallbacks
+  const accountType = (params.accountType as string) || "OCBC FRANK Account";
+  const balance = (params.balance as string) || "1,234.56";
+  const accountNumber = (params.accountNumber as string) || "";
 
   const toggleAdvanced = () => {
     // This creates a smooth slide-down effect when the button is pressed
@@ -60,27 +66,27 @@ const AccountDetailsScreen = ({
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" />
+      <StatusBar barStyle="light-content" />
 
       {/* Top Bar */}
       <View style={styles.topBar}>
         <TouchableOpacity
-          onPress={() => navigation?.goBack()}
+          onPress={() => router.push("/homepage")}
           style={styles.backButton}
         >
-          <Icon name="chevron-left" size={20} color="#005eb8" />
+          <Icon name="chevron-left" size={20} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.headerText}>Account Details</Text>
         <TouchableOpacity onPress={handleMenuPress}>
-          <Icon name="ellipsis-v" size={18} color="#666" />
+          <Icon name="ellipsis-v" size={18} color="#fff" />
         </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Product Header Card */}
         <View style={styles.productHeader}>
-          <Text style={styles.productTitle}>OCBC FRANK Account</Text>
-          <Text style={styles.balanceText}>Available Balance: S$1,234.56</Text>
+          <Text style={styles.productTitle}>{accountType}</Text>
+          <Text style={styles.balanceText}>Available Balance: S${balance}</Text>
         </View>
 
         <Text style={styles.sectionTitle}>Recent Activity</Text>
@@ -152,21 +158,21 @@ const AccountDetailsScreen = ({
           style={styles.navItem}
           onPress={() => router.push("/homepage")}
         >
-          <Icon name="home" size={20} color="#888" />
+          <Icon name="home" size={22} color="#888" />
           <Text style={styles.navText}>Home</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.navItem}
           onPress={() => router.push("/transferscreen")}
         >
-          <Icon name="exchange-alt" size={20} color="#888" />
+          <Icon name="exchange-alt" size={22} color="#888" />
           <Text style={styles.navText}>Pay & Transfer</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.navItem}
           onPress={() => router.push("/more")}
         >
-          <Icon name="th-large" size={20} color="#888" />
+          <Icon name="th-large" size={22} color="#888" />
           <Text style={styles.navText}>More</Text>
         </TouchableOpacity>
       </View>
@@ -181,12 +187,14 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     padding: 20,
+    paddingTop: 40,
+    backgroundColor: "#da291c",
     borderBottomWidth: 1,
     borderBottomColor: "#eee",
   },
-  headerText: { fontSize: 20, fontWeight: "700", color: "#333" },
+  headerText: { fontSize: 20, fontWeight: "700", color: "#fff" },
   backButton: { padding: 8 },
-  scrollContent: { padding: 20, paddingBottom: 100 },
+  scrollContent: { padding: 15, paddingBottom: 100 },
   productHeader: {
     backgroundColor: "#e8a87c", // Match original color
     padding: 30,
@@ -259,9 +267,16 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: "#eee",
     paddingVertical: 10,
+    paddingBottom: 35,
+    paddingTop: 12,
   },
-  navItem: { flex: 1, alignItems: "center" },
-  navText: { fontSize: 11, marginTop: 4, fontWeight: "500", color: "#888" },
+  navItem: { flex: 1, alignItems: "center", paddingVertical: 6 },
+  navText: {
+    fontSize: 12,
+    marginTop: 4,
+    fontWeight: "500",
+    color: "#888",
+  },
 });
 
 export default AccountDetailsScreen;
