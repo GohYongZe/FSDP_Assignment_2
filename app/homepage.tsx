@@ -30,7 +30,7 @@ export default function HomePage() {
   const router = useRouter();
 
   // State from homepage.tsx
-  const [isHidden, setIsHidden] = useState(true);
+  const [isHidden, setIsHidden] = useState(false);
   const [activeTab, setActiveTab] = useState("accounts");
 
   // State from homepage.tsx
@@ -111,52 +111,58 @@ export default function HomePage() {
       console.log("Scanned QR:", parsed);
       setShowScanner(false); // Close now
 
-        if (parsed.type === 'request') {
-            // Payment Request
-            if (parsed.accountNo && parsed.amount) {
-                Alert.alert(
-                    "Payment Request", 
-                    `Do you want to pay SGD ${parsed.amount} to ${parsed.accountNo}?`,
-                    [
-                        { text: "Cancel", style: "cancel" },
-                        { text: "Pay", onPress: () => {
-                            router.push({
-                                pathname: "/twotappay",
-                                params: {
-                                    accountNo: parsed.accountNo,
-                                    nickName: parsed.name || 'Quick Pay',
-                                    amount: parsed.amount // Pass amount to pre-select
-                                }
-                            });
-                        }}
-                    ]
-                );
-            }
-        } else if (parsed.accountNo) {
-            // Link Request (Standard Profile QR)
-            Alert.alert(
-                "Link Account", 
-                `Found account: ${parsed.accountNo}. Do you want to link?`,
-                [
-                    { text: "Cancel", style: "cancel" },
-                    { text: "Link", onPress: () => {
-                        router.push({
-                            pathname: "/linktoaccount",
-                            params: {
-                                accountNo: parsed.accountNo,
-                                name: parsed.name || ''
-                            }
-                        });
-                    }}
-                ]
-            );
-        } else {
-            Alert.alert("Invalid QR", "This QR code is not recognized.");
+      if (parsed.type === "request") {
+        // Payment Request
+        if (parsed.accountNo && parsed.amount) {
+          Alert.alert(
+            "Payment Request",
+            `Do you want to pay SGD ${parsed.amount} to ${parsed.accountNo}?`,
+            [
+              { text: "Cancel", style: "cancel" },
+              {
+                text: "Pay",
+                onPress: () => {
+                  router.push({
+                    pathname: "/twotappay",
+                    params: {
+                      accountNo: parsed.accountNo,
+                      nickName: parsed.name || "Quick Pay",
+                      amount: parsed.amount, // Pass amount to pre-select
+                    },
+                  });
+                },
+              },
+            ],
+          );
         }
+      } else if (parsed.accountNo) {
+        // Link Request (Standard Profile QR)
+        Alert.alert(
+          "Link Account",
+          `Found account: ${parsed.accountNo}. Do you want to link?`,
+          [
+            { text: "Cancel", style: "cancel" },
+            {
+              text: "Link",
+              onPress: () => {
+                router.push({
+                  pathname: "/linktoaccount",
+                  params: {
+                    accountNo: parsed.accountNo,
+                    name: parsed.name || "",
+                  },
+                });
+              },
+            },
+          ],
+        );
+      } else {
+        Alert.alert("Invalid QR", "This QR code is not recognized.");
+      }
     } catch (e) {
-        console.error("Error parsing QR code:", e);
-        setShowScanner(false);
-        Alert.alert("Error", "Could not parse QR code.");
+      console.error("Error parsing QR code:", e);
+      setShowScanner(false);
+      Alert.alert("Error", "Could not parse QR code.");
     }
   };
 
@@ -278,7 +284,7 @@ export default function HomePage() {
         Alert.alert(
           "No Accounts Found",
           "No bank accounts are linked to this email. Please contact support or create an account.",
-          [{ text: "OK" }]
+          [{ text: "OK" }],
         );
       }
 
@@ -321,7 +327,10 @@ export default function HomePage() {
 
   // Cobi Handlers
   const handleCobiPress = async () => {
-    Alert.alert("Feature Unavailable", "Voice commands are currently disabled in this environment.");
+    Alert.alert(
+      "Feature Unavailable",
+      "Voice commands are currently disabled in this environment.",
+    );
     /*
     if (isCobiListening) {
       ExpoSpeechRecognitionModule.stop();
@@ -419,7 +428,7 @@ export default function HomePage() {
           <View className="items-center">
             <TouchableOpacity
               className="bg-gray-100 p-3 rounded-full mb-1"
-              onPress={() => router.push("/TransferScreen")}
+              onPress={() => router.push("/transferscreen")}
             >
               <FontAwesome6 name="comment-dollar" size={20} color="black" />
             </TouchableOpacity>
@@ -444,7 +453,7 @@ export default function HomePage() {
             className="mr-3"
           >
             <FontAwesome6
-              name={isHidden ? "eye" : "eye-slash"}
+              name={isHidden ? "eye-slash" : "eye"}
               size={20}
               color={isHidden ? "#666" : "#da291c"}
             />
@@ -475,7 +484,18 @@ export default function HomePage() {
         {selectedAccount ? (
           <TouchableOpacity
             className="bg-gray-50 mx-4 p-5 rounded-xl border border-gray-200"
-            onPress={() => router.push("/accountdetails")}
+            onPress={() =>
+              router.push({
+                pathname: "/accountdetails",
+                params: {
+                  accountType:
+                    selectedAccount?.accountType ||
+                    `OCBC ${selectedAccount?.type === "foreign" ? "Foreign" : "FRANK"} Account`,
+                  balance: selectedAccount?.balance?.toFixed(2) || "0.00",
+                  accountNumber: selectedAccount?.accountNumber || "",
+                },
+              })
+            }
           >
             <View className="flex-row justify-between items-center mb-4">
               <View className="flex-row items-center">
@@ -485,30 +505,59 @@ export default function HomePage() {
                   </Text>
                 </View>
                 <View>
-                  <Text className="font-bold text-gray-800">
+                  <Text className="text-xl font-bold text-gray-800">
                     {selectedAccount?.accountType ||
                       `OCBC ${selectedAccount?.type === "foreign" ? "Foreign" : "FRANK"} Account`}
                   </Text>
                   <Text
-                    className={`text-xs text-gray-500 ${isHidden ? "bg-gray-200 text-transparent" : ""}`}
+                    className={`text-base font-medium text-gray-600 mt-1 ${isHidden ? "bg-gray-200 text-transparent" : ""}`}
                   >
                     {isHidden
-                      ? "••••••••"
-                      : selectedAccount?.accountNumber || "123-45678-9"}
+                      ? "•••••••••••"
+                      : (() => {
+                          const accNo =
+                            selectedAccount?.accountNumber || "123456789";
+                          // Format as XXX-XXXXX-XXX
+                          if (accNo.length >= 9) {
+                            return `${accNo.slice(0, 3)}-${accNo.slice(3, -3)}-${accNo.slice(-3)}`;
+                          }
+                          return accNo;
+                        })()}
                   </Text>
                 </View>
               </View>
               <FontAwesome6 name="chevron-right" size={16} color="gray" />
             </View>
 
-            <View className="border-t border-gray-200 pt-3 flex-row justify-between items-end">
-              <Text className="text-gray-400 text-sm">Available balance</Text>
+            <View className="flex-row justify-between items-end mb-3">
+              <Text className="text-gray-400 text-base">Available balance</Text>
               <Text
-                className={`text-lg font-bold ${isHidden ? "bg-gray-200 text-transparent" : "text-gray-800"}`}
+                className={`text-xl font-bold ${isHidden ? "bg-gray-200 text-transparent" : "text-gray-800"}`}
               >
                 {isHidden
                   ? "••••••"
-                  : `S$ ${selectedAccount?.balance?.toFixed(2) || "0.00"}`}
+                  : `${selectedAccount?.balance?.toFixed(2) || "0.00"} SGD`}
+              </Text>
+            </View>
+            <View className="border-t border-gray-200 pt-3 flex-row justify-between items-center">
+              <Text className="text-gray-400 text-base">Debit card no.</Text>
+              <Text
+                className={`text-base font-medium text-gray-600 ${isHidden ? "bg-gray-200 text-transparent" : ""}`}
+              >
+                {isHidden
+                  ? "••••••••••••"
+                  : (() => {
+                      const accNo =
+                        selectedAccount?.accountNumber || "123456789";
+                      // Format as XXXX-XXXX-XXXX for card display
+                      if (accNo.length >= 9) {
+                        // Group digits in sets of 4
+                        const formatted =
+                          accNo.match(/.{1,4}/g)?.join("-") || accNo;
+                        return formatted;
+                      }
+                      return accNo;
+                    })()}
               </Text>
             </View>
           </TouchableOpacity>
@@ -632,9 +681,7 @@ export default function HomePage() {
       {isCobiListening && (
         <View style={styles.cobiPopup}>
           <Text style={styles.cobiTitle}>Cobi Assistant</Text>
-          <Text style={styles.cobiText}>
-            {spokenText || "Listening..."}
-          </Text>
+          <Text style={styles.cobiText}>{spokenText || "Listening..."}</Text>
         </View>
       )}
 
@@ -651,7 +698,7 @@ export default function HomePage() {
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.navItem}
-          onPress={() => router.push("/TransferScreen")}
+          onPress={() => router.push("/transferscreen")}
         >
           <FontAwesome5 name="exchange-alt" size={22} color="#888" />
           <Text style={styles.navItemText}>Pay & Transfer</Text>
@@ -702,7 +749,8 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: "#eee",
     paddingVertical: 8,
-    paddingBottom: 10,
+    paddingBottom: 35,
+    paddingTop: 12,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.05,
@@ -800,7 +848,7 @@ const styles = StyleSheet.create({
   },
   cobiButton: {
     position: "absolute",
-    bottom: 96,
+    bottom: 110,
     right: 24,
     width: 64,
     height: 64,
