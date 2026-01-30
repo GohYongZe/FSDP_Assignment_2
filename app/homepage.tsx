@@ -402,7 +402,7 @@ export default function HomePage() {
             </View>
           </View>
           <View className="mb-8">
-            <Text className="text-3xl font-bold text-gray-800">
+            <Text className="text-3xl font-bold text-gray-800 mb-3">
               Welcome, {userName}
             </Text>
             {accounts.length > 1 && (
@@ -421,10 +421,6 @@ export default function HomePage() {
 
         {/* Quick Actions Card */}
         <View className="bg-white mx-4 -mt-12 p-5 rounded-xl shadow-lg flex-row justify-around relative">
-          <TouchableOpacity className="absolute top-2 right-2">
-            <FontAwesome6 name="gear" size={16} color="gray" />
-          </TouchableOpacity>
-
           <View className="items-center">
             <TouchableOpacity
               className="bg-gray-100 p-3 rounded-full mb-1"
@@ -443,6 +439,15 @@ export default function HomePage() {
               <FontAwesome6 name="qrcode" size={20} color="black" />
             </TouchableOpacity>
             <Text className="text-xs text-gray-600">Scan</Text>
+          </View>
+
+          <View className="h-full w-px bg-gray-300" />
+
+          <View className="items-center">
+            <TouchableOpacity className="bg-orange-100 p-3 rounded-full mb-1">
+              <FontAwesome6 name="gear" size={20} color="black" />
+            </TouchableOpacity>
+            <Text className="text-xs text-gray-600">Customise</Text>
           </View>
         </View>
 
@@ -483,7 +488,7 @@ export default function HomePage() {
         {/* Account Details Card */}
         {selectedAccount ? (
           <TouchableOpacity
-            className="bg-gray-50 mx-4 p-5 rounded-xl border border-gray-200"
+            className="bg-orange-50 mx-4 p-5 rounded-xl border border-gray-200"
             onPress={() =>
               router.push({
                 pathname: "/accountdetails",
@@ -501,7 +506,15 @@ export default function HomePage() {
               <View className="flex-row items-center">
                 <View className="bg-orange-300 w-10 h-10 rounded-full items-center justify-center mr-3">
                   <Text className="text-white font-bold text-xs">
-                    {selectedAccount?.type === "foreign" ? "FOR" : "FRA"}
+                    {(() => {
+                      const accountType =
+                        selectedAccount?.accountType ||
+                        (selectedAccount?.type === "foreign"
+                          ? "Foreign"
+                          : "Frank");
+                      const firstWord = accountType.split(" ")[0];
+                      return firstWord.substring(0, 3).toUpperCase();
+                    })()}
                   </Text>
                 </View>
                 <View>
@@ -510,7 +523,7 @@ export default function HomePage() {
                       `OCBC ${selectedAccount?.type === "foreign" ? "Foreign" : "FRANK"} Account`}
                   </Text>
                   <Text
-                    className={`text-base font-medium text-gray-600 mt-1 ${isHidden ? "bg-gray-200 text-transparent" : ""}`}
+                    className={`text-base font-medium text-black-600 mt-1 ${isHidden ? "bg-black-200 text-transparent" : ""}`}
                   >
                     {isHidden
                       ? "•••••••••••"
@@ -530,9 +543,9 @@ export default function HomePage() {
             </View>
 
             <View className="flex-row justify-between items-end mb-3">
-              <Text className="text-gray-400 text-base">Available balance</Text>
+              <Text className="text-gray-700 text-base">Available balance</Text>
               <Text
-                className={`text-xl font-bold ${isHidden ? "bg-gray-200 text-transparent" : "text-gray-800"}`}
+                className={`text-xl font-bold ${isHidden ? "bg-black-200 text-transparent" : "text-black-800"}`}
               >
                 {isHidden
                   ? "••••••"
@@ -540,9 +553,13 @@ export default function HomePage() {
               </Text>
             </View>
             <View className="border-t border-gray-200 pt-3 flex-row justify-between items-center">
-              <Text className="text-gray-400 text-base">Debit card no.</Text>
+              <Text className="text-gray-700 text-base">
+                {selectedAccount?.accountType?.toLowerCase().includes("credit")
+                  ? "Credit card no."
+                  : "Debit card no."}
+              </Text>
               <Text
-                className={`text-base font-medium text-gray-600 ${isHidden ? "bg-gray-200 text-transparent" : ""}`}
+                className={`text-base font-medium text-black-600 ${isHidden ? "bg-black-200 text-transparent" : ""}`}
               >
                 {isHidden
                   ? "••••••••••••"
@@ -562,10 +579,53 @@ export default function HomePage() {
             </View>
           </TouchableOpacity>
         ) : (
-          <View className="bg-gray-50 mx-4 p-5 rounded-xl border border-gray-200">
+          <View className="bg-orange-50 mx-4 p-5 rounded-xl border border-gray-200">
             <Text className="text-center text-gray-500">
               No accounts found. Please contact support.
             </Text>
+          </View>
+        )}
+
+        {/* Recent Transactions */}
+        {selectedAccount && (
+          <View className="mx-4 mt-4 mb-32">
+            <Text className="text-xl font-bold text-gray-800 mb-3 mt-3">
+              Recent Transactions
+            </Text>
+
+            {/* Transaction 1 */}
+            <View className="bg-white p-4 rounded-lg border border-gray-200 mb-2">
+              <View className="flex-row justify-between items-center">
+                <View className="flex-1">
+                  <Text className="text-xs text-gray-500 mb-1">28 Jan</Text>
+                  <Text className="text-sm font-bold text-gray-800 mb-1">
+                    TRANSFER
+                  </Text>
+                  <Text className="text-sm text-gray-600">From John Doe</Text>
+                </View>
+                <Text className="text-base font-semibold text-green-600">
+                  +150.00
+                </Text>
+              </View>
+            </View>
+
+            {/* Transaction 2 */}
+            <View className="bg-white p-4 rounded-lg border border-gray-200">
+              <View className="flex-row justify-between items-center">
+                <View className="flex-1">
+                  <Text className="text-xs text-gray-500 mb-1">27 Jan</Text>
+                  <Text className="text-sm font-bold text-gray-800 mb-1">
+                    PAYMENT
+                  </Text>
+                  <Text className="text-sm text-gray-600">
+                    Shopping Mall Purchase
+                  </Text>
+                </View>
+                <Text className="text-base font-semibold text-gray-800">
+                  -45.50
+                </Text>
+              </View>
+            </View>
           </View>
         )}
       </ScrollView>
@@ -599,7 +659,13 @@ export default function HomePage() {
                   >
                     <View style={styles.accountIcon}>
                       <Text style={styles.accountIconText}>
-                        {account.type === "foreign" ? "FOR" : "FRA"}
+                        {(() => {
+                          const accountType =
+                            account.accountType ||
+                            (account.type === "foreign" ? "Foreign" : "Frank");
+                          const firstWord = accountType.split(" ")[0];
+                          return firstWord.substring(0, 3).toUpperCase();
+                        })()}
                       </Text>
                     </View>
                     <View style={styles.accountInfo}>
