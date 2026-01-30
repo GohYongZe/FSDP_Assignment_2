@@ -2,7 +2,7 @@ import { FontAwesome5, FontAwesome6 } from "@expo/vector-icons";
 // import { ExpoSpeechRecognitionModule, useSpeechRecognitionEvent } from "@jamsch/expo-speech-recognition";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { CameraView, useCameraPermissions } from "expo-camera";
-import { Link, useRouter } from "expo-router";
+import { Link, useNavigation, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -28,35 +28,48 @@ interface Account {
   balance?: number;
 }
 
-export default function HomePage() {
-  const router = useRouter();
+interface Transaction {
+  id: string;
+  senderaccountNo: string;
+  receiveraccountNo: string;
+  amount: number;
+  message: string;
+  created_at: string;
+}
 
-  // State from homepage.tsx
+export default function HomePage() {
+  const router = useRouter(); // push/replace logic
+  const navigation = useNavigation(); // tab switching
+
+  // ui state
   const [isHidden, setIsHidden] = useState(false);
   const [activeTab, setActiveTab] = useState("accounts");
 
-  // State from homepage.tsx
+  // user state
   const [userName, setUserName] = useState<string>("");
   const [loading, setLoading] = useState(true);
 
-  // Language state
+  // language state
   const [language, setLanguage] = useState("en");
 
-  // New state for account management
+  // account state
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
   const [showAccountModal, setShowAccountModal] = useState(false);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [pendingRequest, setPendingRequest] = useState<any>(null);
+  const [showRequestModal, setShowRequestModal] = useState(false);
 
   // qr scanning
   const [showScanner, setShowScanner] = useState(false);
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
 
-  // Cobi States
+  // cobi states
   const [isCobiListening, setIsCobiListening] = useState(false);
   const [spokenText, setSpokenText] = useState("");
 
-  // Load language preference
+  // load language preference
   const loadLanguage = async () => {
     try {
       const savedLanguage = await AsyncStorage.getItem("selectedLanguage");
@@ -73,7 +86,73 @@ export default function HomePage() {
     loadLanguage();
   }, []);
 
-  // Cobi Event Listeners - Disabled
+  useEffect(() => {
+    if (selectedAccount?.accountNumber) {
+        fetchTransactions(selectedAccount.accountNumber);
+
+        // real-time transactions
+        const txChannel = supabase.channel(`home_transactions_${selectedAccount.accountNumber}`)
+        .on(
+            'postgres_changes',
+            { 
+                event: 'INSERT', 
+                schema: 'public', 
+                table: 'TransactionsHistory',
+                filter: `receiveraccountNo=eq.${selectedAccount.accountNumber}`
+            },
+            () => { 
+                console.log("Realtime: New incoming tx (Homepage)"); 
+                fetchTransactions(selectedAccount.accountNumber!); 
+                fetchUserData(); // refresh balance
+            }
+        )
+        .on(
+            'postgres_changes',
+            { 
+                event: 'INSERT', 
+                schema: 'public', 
+                table: 'TransactionsHistory',
+                filter: `senderaccountNo=eq.${selectedAccount.accountNumber}`
+            },
+            () => { 
+                console.log("Realtime: New outgoing tx (Homepage)"); 
+                fetchTransactions(selectedAccount.accountNumber!);
+                fetchUserData(); // refresh balance
+            }
+        )
+        .subscribe();
+
+        return () => {
+            supabase.removeChannel(txChannel);
+        };
+    }
+  }, [selectedAccount]);
+
+  const fetchTransactions = async (accountNo: string) => {
+    try {
+        const threeDaysAgo = new Date();
+        threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+
+        const { data, error } = await supabase
+            .from('TransactionsHistory')
+            .select('*')
+            .or(`senderaccountNo.eq.${accountNo},receiveraccountNo.eq.${accountNo}`)
+            .gte('created_at', threeDaysAgo.toISOString()) // last 72 hours
+            .order('created_at', { ascending: false })
+            .limit(10); // recent transactions limit
+
+        if (error) {
+            console.error("Error fetching transactions:", error);
+        } else {
+            console.log("Transactions fetched:", data);
+            setTransactions(data || []);
+        }
+    } catch (err) {
+        console.error("Err:", err);
+    }
+  };
+
+  // cobi listeners disabled
   /*
   useSpeechRecognitionEvent("result", (event) => {
     const transcript = event.results[0]?.transcript;
@@ -119,18 +198,17 @@ export default function HomePage() {
     type: string;
     data: string;
   }) => {
-    // Prevent multiple scans
+    // prevent multiple scans
     if (scanned) return;
     setScanned(true);
-    // Don't close immediately to avoid jarring transitions, or close if we show an alert.
 
     try {
       const parsed = JSON.parse(data);
       console.log("Scanned QR:", parsed);
-      setShowScanner(false); // Close now
+      setShowScanner(false); // close scanner
 
       if (parsed.type === "request") {
-        // Payment Request
+        // payment request
         if (parsed.accountNo && parsed.amount) {
           Alert.alert(
             getTranslation("paymentRequest", language),
@@ -148,7 +226,7 @@ export default function HomePage() {
                     params: {
                       accountNo: parsed.accountNo,
                       nickName: parsed.name || "Quick Pay",
-                      amount: parsed.amount, // Pass amount to pre-select
+                      amount: parsed.amount, // pass amount
                     },
                   });
                 },
@@ -157,7 +235,7 @@ export default function HomePage() {
           );
         }
       } else if (parsed.accountNo) {
-        // Link Request (Standard Profile QR)
+        // link request
         Alert.alert(
           getTranslation("linkAccount", language),
           getTranslationWithParams("linkAccountMessage", language, {
@@ -416,6 +494,81 @@ export default function HomePage() {
     }
   };
 
+  // Payment Request Listener
+  useEffect(() => {
+     if (!selectedAccount?.accountNumber) return;
+
+     const checkRequests = async () => {
+         const { data, error } = await supabase
+             .from('PaymentRequests')
+             .select('*')
+             .eq('receiver_account_no', selectedAccount.accountNumber)
+             .eq('status', 'pending');
+         
+         if (data && data.length > 0) {
+             setPendingRequest(data[0]);
+             setShowRequestModal(true);
+         }
+     };
+
+     checkRequests();
+
+     const channel = supabase.channel('home_requests')
+        .on('postgres_changes', 
+            { event: 'INSERT', schema: 'public', table: 'PaymentRequests', filter: `receiver_account_no=eq.${selectedAccount.accountNumber}` },
+            (payload) => {
+                setPendingRequest(payload.new);
+                setShowRequestModal(true);
+            }
+        )
+        .subscribe();
+
+     return () => { supabase.removeChannel(channel); };
+  }, [selectedAccount?.accountNumber]);
+
+  const handleAcceptRequest = async () => {
+      if (!pendingRequest || !selectedAccount) return;
+      
+      try {
+          // 1. Transfer
+          const { data, error } = await supabase.rpc('transfer_funds', {
+            sender_account_no: selectedAccount.accountNumber,     
+            receiver_account_no: pendingRequest.sender_account_no, 
+            amount: pendingRequest.amount,
+            description: pendingRequest.description || `Payment Request Accepted`
+        });
+
+        if (error) throw error;
+        if (data && data.error) throw new Error(data.error);
+
+        // 2. Update Request Status
+        await supabase
+            .from('PaymentRequests')
+            .update({ status: 'accepted' })
+            .eq('id', pendingRequest.id);
+
+        Alert.alert("Success", `Paid SGD ${pendingRequest.amount} to sender.`);
+        setShowRequestModal(false);
+        setPendingRequest(null);
+        fetchUserData(); // refresh balance
+        if(selectedAccount?.accountNumber) fetchTransactions(selectedAccount.accountNumber);
+
+      } catch (e: any) {
+          Alert.alert("Error", e.message);
+      }
+  };
+
+  const handleDeclineRequest = async () => {
+      if (!pendingRequest) return;
+      await supabase
+            .from('PaymentRequests')
+            .update({ status: 'declined' })
+            .eq('id', pendingRequest.id);
+      
+      setShowRequestModal(false);
+      setPendingRequest(null);
+  };
+
   if (loading) {
     return (
       <View className="flex-1 justify-center items-center bg-white">
@@ -469,13 +622,23 @@ export default function HomePage() {
           <View className="items-center">
             <TouchableOpacity
               className="bg-gray-100 p-3 rounded-full mb-1"
-              onPress={() => router.push("/transferscreen")}
+              onPress={() => router.push("/paynow")}
             >
               <FontAwesome6 name="comment-dollar" size={20} color="black" />
             </TouchableOpacity>
             <Text className="text-xs text-gray-600">
               {getTranslation("payNow", language)}
             </Text>
+          </View>
+
+          <View className="items-center">
+            <TouchableOpacity
+              className="bg-gray-100 p-3 rounded-full mb-1"
+              onPress={() => router.push("/givenow")}
+            >
+              <FontAwesome6 name="hand-holding-dollar" size={20} color="black" />
+            </TouchableOpacity>
+            <Text className="text-xs text-gray-600">GiveNow</Text>
           </View>
 
           <View className="items-center">
@@ -642,48 +805,54 @@ export default function HomePage() {
         {/* Recent Transactions */}
         {selectedAccount && (
           <View className="mx-4 mt-4 mb-32">
-            <Text className="text-xl font-bold text-gray-800 mb-3 mt-3">
-              {getTranslation("recentTransactions", language)}
-            </Text>
+            <View className="flex-row justify-between items-center mb-3 mt-3">
+              <Text className="text-xl font-bold text-gray-800">
+                {getTranslation("recentTransactions", language)}
+              </Text>
+              <TouchableOpacity onPress={() => router.push({
+                pathname: '/transactions',
+                params: { accountNo: selectedAccount.accountNumber }
+              })}>
+                <Text className="text-sm font-semibold text-red-600">View All</Text>
+              </TouchableOpacity>
+            </View>
             <Text className="text-sm text-gray-500 mb-3">
-              {getTranslation("upTo50Last7Days", language)}
+              Past 3 days
             </Text>
 
-            {/* Transaction 1 */}
-            <View className="bg-white p-4 rounded-lg border border-gray-200 mb-2">
-              <View className="flex-row justify-between items-center">
-                <View className="flex-1">
-                  <Text className="text-xs text-gray-500 mb-1">28 Jan</Text>
-                  <Text className="text-sm font-bold text-gray-800 mb-1">
-                    {getTranslation("transfer", language).toUpperCase()}
-                  </Text>
-                  <Text className="text-sm text-gray-600">
-                    {getTranslation("from", language)} John Doe
-                  </Text>
-                </View>
-                <Text className="text-base font-semibold text-green-600">
-                  +150.00
-                </Text>
-              </View>
-            </View>
+            {transactions.length > 0 ? (
+                transactions.map((tx) => {
+                    const isReceived = tx.receiveraccountNo === selectedAccount.accountNumber;
+                    const amount = parseFloat(tx.amount.toString());
+                    const date = new Date(tx.created_at).toLocaleDateString("en-GB", {
+                          day: "numeric",
+                          month: "short",
+                        });
 
-            {/* Transaction 2 */}
-            <View className="bg-white p-4 rounded-lg border border-gray-200">
-              <View className="flex-row justify-between items-center">
-                <View className="flex-1">
-                  <Text className="text-xs text-gray-500 mb-1">27 Jan</Text>
-                  <Text className="text-sm font-bold text-gray-800 mb-1">
-                    {getTranslation("payment", language).toUpperCase()}
-                  </Text>
-                  <Text className="text-sm text-gray-600">
-                    {getTranslation("shoppingMallPurchase", language)}
-                  </Text>
+                    return (
+                        <View key={tx.id} className="bg-white p-4 rounded-lg border border-gray-200 mb-2">
+                        <View className="flex-row justify-between items-center">
+                            <View className="flex-1">
+                            <Text className="text-xs text-gray-500 mb-1">{date}</Text>
+                            <Text className="text-sm font-bold text-gray-800 mb-1">
+                                {isReceived ? "RECEIVED" : "SENT"}
+                            </Text>
+                            <Text className="text-sm text-gray-600">
+                                {tx.message || (isReceived ? `From ${tx.senderaccountNo}` : `To ${tx.receiveraccountNo}`)}
+                            </Text>
+                            </View>
+                            <Text className={`text-base font-semibold ${isReceived ? "text-green-600" : "text-black"}`}>
+                            {isReceived ? "+" : "-"}{Math.abs(amount).toFixed(2)}
+                            </Text>
+                        </View>
+                        </View>
+                    );
+                })
+            ) : (
+                <View className="p-4 rounded-lg border border-gray-200 bg-white items-center">
+                    <Text className="text-gray-500 italic">No recent transactions</Text>
                 </View>
-                <Text className="text-base font-semibold text-gray-800">
-                  -45.50
-                </Text>
-              </View>
-            </View>
+            )}
           </View>
         )}
       </ScrollView>
@@ -815,7 +984,7 @@ export default function HomePage() {
       <View style={styles.bottomNav}>
         <TouchableOpacity
           style={[styles.navItem, styles.navItemActive]}
-          onPress={() => router.push("/homepage")}
+          onPress={() => navigation.navigate("homepage" as never)}
         >
           <FontAwesome5 name="home" size={22} color="#da291c" />
           <Text style={[styles.navItemText, styles.navItemTextActive]}>
@@ -833,7 +1002,7 @@ export default function HomePage() {
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.navItem}
-          onPress={() => router.push("/more")}
+          onPress={() => navigation.navigate("more" as never)}
         >
           <FontAwesome5 name="th-large" size={22} color="#888" />
           <Text style={styles.navItemText}>
@@ -868,6 +1037,40 @@ export default function HomePage() {
           </TouchableOpacity>
         </View>
       </Modal>
+
+      {/* Payment Request Modal */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={showRequestModal}
+        onRequestClose={() => {}}
+      >
+         <View className="flex-1 bg-black/60 items-center justify-center p-6">
+            <View className="bg-white rounded-2xl p-6 w-full max-w-sm items-center">
+                 <FontAwesome6 name="money-bill-transfer" size={48} color="#2563eb" style={{ marginBottom: 16 }} />
+                 <Text className="text-xl font-bold text-gray-800 text-center mb-2">Request Received</Text>
+                 <Text className="text-gray-600 text-center mb-6">
+                    <Text className="font-bold">{pendingRequest?.description || 'Someone'}</Text> is requesting <Text className="font-bold">SGD {pendingRequest?.amount}</Text>.
+                 </Text>
+                 
+                 <View className="flex-row gap-3 w-full">
+                    <TouchableOpacity 
+                        onPress={handleDeclineRequest}
+                        className="flex-1 py-3 bg-red-100 rounded-xl items-center"
+                    >
+                        <Text className="text-red-700 font-bold">Decline</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                        onPress={handleAcceptRequest}
+                        className="flex-1 py-3 bg-green-600 rounded-xl items-center"
+                    >
+                        <Text className="text-white font-bold">Pay Now</Text>
+                    </TouchableOpacity>
+                 </View>
+            </View>
+         </View>
+      </Modal>
+
     </View>
   );
 }

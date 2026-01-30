@@ -2,13 +2,13 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Modal,
-    ScrollView,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Modal,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import QRCode from 'react-native-qrcode-svg';
 import { supabase } from "../lib/supabase";
@@ -111,7 +111,7 @@ export default function LinkAccounts() {
     async (user: UserAccount) => {
       if (!user || !user.accountNo) return;
 
-      // Fetch outgoing requests (accounts that I have linked to)
+      // outgoing requests (accounts i linked to)
       const { data: outgoing, error: outgoingError } = await supabase
         .from("Linkedaccounts")
         .select("*")
@@ -121,7 +121,7 @@ export default function LinkAccounts() {
         console.error("Error fetching linked accounts:", outgoingError);
       }
 
-      // Separate outgoing into Pending n other stuff
+      // separate outgoing into pending and others
       const pendingOutgoing: LinkedAccount[] = [];
       const otherOutgoing: LinkedAccount[] = [];
 
@@ -136,7 +136,7 @@ export default function LinkAccounts() {
 
       setOutgoingRequests(pendingOutgoing);
 
-      // Fetch incoming requests
+      // fetch incoming requests
       const { data: incoming, error: incomingError } = await supabase
         .from("Linkedaccounts")
         .select("*")
@@ -148,7 +148,7 @@ export default function LinkAccounts() {
         const pendingIncoming: LinkedAccount[] = [];
         const acceptedIncoming: LinkedAccount[] = [];
 
-        // Process incoming requests
+        // process incoming requests
         await Promise.all(
           (incoming || []).map(async (req) => {
             const name = await fetchNameByAccountNo(req.accountNo);
@@ -171,7 +171,7 @@ export default function LinkAccounts() {
 
         setIncomingRequests(pendingIncoming);
 
-        // Merge outgoing and incoming requests
+        // merge outgoing and incoming requests
         setLinkedAccounts([...otherOutgoing, ...acceptedIncoming]);
       }
     },
@@ -184,15 +184,59 @@ export default function LinkAccounts() {
     if (user) {
       setCurrentUser(user);
       await fetchData(user);
+      setLoading(false);
+      return user;
     } else {
       Alert.alert("Error", "Could not verify user.");
+      setLoading(false);
+      return null;
     }
-    setLoading(false);
   }, [fetchAndStoreCurrentUser, fetchData]);
 
   useEffect(() => {
-    initialize();
-  }, [initialize]);
+    let channel: any;
+
+    const setupRealtime = async () => {
+        const user = await initialize();
+        if (user) {
+             // subscribe to changes in linkedaccounts
+             channel = supabase.channel('linked_accounts_updates')
+                .on(
+                    'postgres_changes',
+                    {
+                        event: '*',
+                        schema: 'public',
+                        table: 'Linkedaccounts',
+                        filter: `linkedWith=eq.${user.accountNo}` 
+                    },
+                    (payload) => {
+                        console.log('Realtime update (incoming):', payload);
+                        fetchData(user);
+                    }
+                )
+                .on(
+                    'postgres_changes',
+                    {
+                        event: '*',
+                        schema: 'public',
+                        table: 'Linkedaccounts',
+                        filter: `accountNo=eq.${user.accountNo}`
+                    },
+                    (payload) => {
+                        console.log('Realtime update (outgoing):', payload);
+                        fetchData(user);
+                    }
+                )
+                .subscribe();
+        }
+    };
+
+    setupRealtime();
+
+    return () => {
+        if (channel) supabase.removeChannel(channel);
+    };
+  }, [initialize, fetchData]);
 
   const handleRequestAction = async (
     requesterAccountNo: string,
@@ -235,7 +279,7 @@ export default function LinkAccounts() {
         "Unable to delete notification. Database permission denied.",
       );
     } else {
-      // Success
+      // success
       fetchData(currentUser);
     }
   };
@@ -258,7 +302,7 @@ export default function LinkAccounts() {
             let error = null;
 
             if (isMyRequest) {
-              // My outgoing request delete
+              // my outgoing request delete
               const res = await supabase
                 .from("Linkedaccounts")
                 .delete()
@@ -266,7 +310,7 @@ export default function LinkAccounts() {
                 .eq("linkedWith", otherPerson);
               error = res.error;
             } else {
-              // Incoming request delete
+              // incoming request delete
               const res = await supabase
                 .from("Linkedaccounts")
                 .delete()
@@ -311,12 +355,17 @@ export default function LinkAccounts() {
 
   return (
     <ScrollView className="flex-1 bg-gray-50 p-4">
-      {/* Header (for now)*/}
-      <Text className="text-2xl font-bold mb-6 text-gray-800">
-        Linked Accounts
-      </Text>
+      {/* header */}
+      <View className="flex-row items-center mb-6 mt-12">
+        <TouchableOpacity onPress={() => router.push('/more')} className="mr-3">
+            <MaterialIcons name="arrow-back" size={28} color="#1f2937" />
+        </TouchableOpacity>
+        <Text className="text-2xl font-bold text-gray-800">
+            Linked Accounts
+        </Text>
+      </View>
 
-      {/* Link New Account Button */}
+      {/* link new account button */}
       <TouchableOpacity
         onPress={() => router.push("/linktoaccount")}
         className="bg-blue-50 p-4 rounded-xl mb-4 border border-blue-100 flex-row justify-between items-center"
@@ -337,7 +386,7 @@ export default function LinkAccounts() {
         <MaterialIcons name="chevron-right" size={24} color="#2563EB" />
       </TouchableOpacity>
 
-      {/* QR Code Button */}
+      {/* qr code button */}
       <TouchableOpacity
         onPress={() => setShowQRModal(true)}
         className="bg-purple-50 p-4 rounded-xl mb-6 border border-purple-100 flex-row justify-between items-center"
@@ -358,7 +407,7 @@ export default function LinkAccounts() {
         <MaterialIcons name="chevron-right" size={24} color="#9333EA" />
       </TouchableOpacity>
 
-      {/* Outgoing Requests */}
+      {/* outgoing requests */}
       {outgoingRequests.length > 0 && (
         <View className="mb-6">
           <Text className="text-lg font-semibold mb-3 text-gray-700">
@@ -398,7 +447,7 @@ export default function LinkAccounts() {
         </View>
       )}
 
-      {/* Linked Accounts */}
+      {/* linked accounts */}
       <View className="mb-8">
         <Text className="text-lg font-semibold mb-3 text-gray-700">
           My Linked Accounts
@@ -499,7 +548,7 @@ export default function LinkAccounts() {
         )}
       </View>
 
-      {/* Incoming Requests */}
+      {/* incoming requests */}
       <View className="mb-8">
         <Text className="text-lg font-semibold mb-3 text-gray-700">
           Incoming Requests
@@ -553,7 +602,7 @@ export default function LinkAccounts() {
           })
         )}
       </View>
-      {/* QR Modal */}
+      {/* qr modal */}
       <Modal
         animationType="slide"
         transparent={true}

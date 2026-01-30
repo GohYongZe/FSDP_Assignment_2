@@ -1,43 +1,17 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { Alert, KeyboardAvoidingView, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
-import QRCode from 'react-native-qrcode-svg';
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
 import { supabase } from '../lib/supabase';
 
-// 
-const INITIAL_BALANCE = 0; // Will be fetched
-const SG_STORES = [
-    'FairPrice', 'Sheng Siong', 'Toast Box', 'Kopitiam',
-    'Don Don Donki', 'Mustafa Centre', 'Takashimaya',
-    'Cold Storage', '7-Eleven', 'Giant', 'Guardian', 'Watsons'
-];
-
-const generateRandomTransactions = () => {
-    const transactions = [];
-    const count = 3 + Math.floor(Math.random() * 3); // 3 to 5 transactions
-
-    for (let i = 0; i < count; i++) {
-        const store = SG_STORES[Math.floor(Math.random() * SG_STORES.length)];
-        const amount = 100 + (Math.random() * 400); // Between 100 and 500
-        const date = new Date();
-        date.setDate(date.getDate() - Math.floor(Math.random() * 30));
-
-        transactions.push({
-            id: i + 1,
-            name: store,
-            amount: -parseFloat(amount.toFixed(2)),
-            date: date.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
-        });
-    }
-    return transactions;
-};
-
+// initial constants
+const INITIAL_BALANCE = 0; // will be fetched
 const DEFAULT_AMOUNTS = [5, 10, 20, 50, 100];
 
 export default function TwoTapPay() {
   const router = useRouter();
+  const navigation = useNavigation();
   const params = useLocalSearchParams();
   
   const linkedName = params.nickName as string || 'Two-Tap Transfer/Sum Ting';
@@ -53,19 +27,21 @@ export default function TwoTapPay() {
   const [isTransferSuccessful, setIsTransferSuccessful] = useState(false);
   const [instruction, setInstruction] = useState("Tap to select amount.");
 
-  // editing amt
+  // editing amount
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editAmountInput, setEditAmountInput] = useState('');
   const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
   const [myAccountNo, setMyAccountNo] = useState<string | null>(null);
+  const [myAccountName, setMyAccountName] = useState<string | null>(null);
 
   // request mode
-  const [mode, setMode] = useState<'pay' | 'request'>('pay');
-  const [showRequestQR, setShowRequestQR] = useState(false);
+  // const [mode, setMode] = useState<'pay' | 'request'>('pay'); // removed mode toggle
+  const [isRequestProcessing, setIsRequestProcessing] = useState(false);
+  // const [showRequestQR, setShowRequestQR] = useState(false);
 
   useEffect(() => {
-    // Check for pre-filled amount from params
+    // check params
     if (params.amount) {
         const amt = parseFloat(params.amount as string);
         if (!isNaN(amt)) {
@@ -76,29 +52,96 @@ export default function TwoTapPay() {
   }, [params.amount]);
 
   useEffect(() => {
-    // Generate random transactions
-    setTransactions(generateRandomTransactions());
+    // fetch transactions
+    const fetchTransactions = async () => {
+        if (!accountNo || accountNo === 'Unknown Account') return;
 
+        const { data, error } = await supabase
+            .from('TransactionsHistory')
+            .select('*')
+            .or(`senderaccountNo.eq.${accountNo},receiveraccountNo.eq.${accountNo}`)
+            .order('created_at', { ascending: false })
+            .limit(5);
+
+        if (!error && data) {
+             const formatted = data.map((tx: any) => { 
+                const isIncomingToThem = tx.receiveraccountNo === accountNo;
+                // Positive if they received (from Me), Negative if they sent (to Me)
+                const sign = isIncomingToThem ? 1 : -1;
+                const amt = parseFloat(tx.amount) * sign;
+                
+                // Determine display name (Sender)
+                let senderDisplay = tx.senderaccountNo;
+                if (tx.senderaccountNo === accountNo) {
+                    senderDisplay = linkedName;
+                } else if (myAccountNo && tx.senderaccountNo === myAccountNo) {
+                    senderDisplay = `You (${myAccountName || 'Me'})`;
+                }
+
+                return {
+                    id: tx.id,
+                    name:  `From: ${senderDisplay}`, 
+                    amount: amt,
+                    date: new Date(tx.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+                };
+            });
+            setTransactions(formatted);
+        }
+    };
+
+    fetchTransactions();
+
+    // realtime subscription
+    const channel = supabase.channel('twotap_transactions')
+        .on(
+            'postgres_changes',
+            { 
+                event: 'INSERT', 
+                schema: 'public', 
+                table: 'TransactionsHistory',
+                filter: `receiveraccountNo=eq.${accountNo}`
+            },
+            () => { console.log("New incoming tx"); fetchTransactions(); }
+        )
+        .on(
+            'postgres_changes',
+            { 
+                event: 'INSERT', 
+                schema: 'public', 
+                table: 'TransactionsHistory',
+                filter: `senderaccountNo=eq.${accountNo}`
+            },
+            () => { console.log("New outgoing tx"); fetchTransactions(); }
+        )
+        .subscribe();
+    
+    return () => {
+        supabase.removeChannel(channel);
+    };
+
+  }, [accountNo, myAccountNo, myAccountName]); // re-run on identifiers
+
+  useEffect(() => {
     // get current user
-    // load custom amount preference
+    // load preference
     const loadPreference = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user?.email) {
         const email = session.user.email;
         setCurrentUserEmail(email);
 
-        // fetch my account number and balance
+        // fetch my account
         try {
             let { data: accountData } = await supabase
                 .from('Localaccounts')
-                .select('accountNo, balance')
+                .select('accountNo, balance, name')
                 .eq('emailAddress', email)
                 .single();
             
             if (!accountData) {
                 const { data: foreignData } = await supabase
                     .from('Foreignaccounts')
-                    .select('accountNo, balance')
+                    .select('accountNo, balance, name')
                     .eq('emailAddress', email)
                     .single();
                 accountData = foreignData;
@@ -106,10 +149,11 @@ export default function TwoTapPay() {
 
             if (accountData) {
                 setMyAccountNo(accountData.accountNo);
+                setMyAccountName(accountData.name);
                 let fetchedBalance = parseFloat(accountData.balance);
-                // If balance is 0 or invalid (fresh account), give a random balance for demo purposes
-                if (isNaN(fetchedBalance) || fetchedBalance <= 0) {
-                    fetchedBalance = 2000 + Math.random() * 3000;
+                // default 0 if invalid
+                if (isNaN(fetchedBalance)) {
+                    fetchedBalance = 0;
                 }
                 setBalance(fetchedBalance);
             }
@@ -117,7 +161,7 @@ export default function TwoTapPay() {
             console.error("Error fetching my account:", err);
         }
 
-        // fetch linked account balance
+        // fetch linked account
         if (accountNo && accountNo !== 'Unknown Account') {
             try {
                 let { data: linkedData } = await supabase
@@ -137,9 +181,8 @@ export default function TwoTapPay() {
                 
                 if (linkedData) {
                     let linkedBal = parseFloat(linkedData.balance);
-                    // If balance is 0 or invalid, give a random balance for demo purposes
-                    if (isNaN(linkedBal) || linkedBal <= 0) {
-                        linkedBal = 2000 + Math.random() * 3000;
+                    if (isNaN(linkedBal)) {
+                        linkedBal = 0;
                     }
                     setLinkedBalance(linkedBal);
                 }
@@ -255,7 +298,7 @@ export default function TwoTapPay() {
                    Alert.alert("Error", "Failed to unlink account. Please check your connection.");
                } else {
                    Alert.alert("Success", "Account unlinked.", [
-                       { text: "OK", onPress: () => router.push('/linkaccounts') }
+                       { text: "OK", onPress: () => router.navigate('/linkaccounts') }
                    ]);
                }
 
@@ -284,94 +327,107 @@ export default function TwoTapPay() {
     }
 
     if (selectedAmount !== amount) {
-        // first tap
+        // Just select it
         resetTransferState();
         setSelectedAmount(amount);
-        setInstruction(mode === 'pay' ? "Tap again to transfer!" : "Tap again to request!");
+        setInstruction("Choose an action below:");
     } else {
-        // second tap on same amount -> confirm
-        if (mode === 'pay') {
-            executeTransfer(amount);
-        } else {
-            handleRequest(amount);
-        }
+       // Toggle off
+       setSelectedAmount(null);
+       setInstruction("Tap to select amount.");
     }
   };
 
-  const handleRequest = (amount: number) => {
-      setSelectedAmount(amount);
-      if (!myAccountNo) {
-          Alert.alert("Error", "Your account information is missing. Cannot generate request.");
-          return;
-      }
-      setShowRequestQR(true);
-      // Do not reset state yet, so the modal can read 'selectedAmount'
+  const handleRequest = async (amount: number) => {
+    if (!myAccountNo) {
+        Alert.alert("Error", "Your account information is missing.");
+        return;
+    }
+
+    setInstruction("Sending request...");
+    setIsRequestProcessing(true);
+
+    try {
+        const { error } = await supabase
+            .from('PaymentRequests')
+            .insert({
+                sender_account_no: myAccountNo, // me (requester)
+                receiver_account_no: accountNo, // them (payer)
+                amount: amount,
+                status: 'pending',
+                description: `Request from ${myAccountName || 'User'}`
+            });
+
+        if (error) throw error;
+
+        setIsTransferSuccessful(true);
+        setInstruction(`Request for SGD ${amount} sent!`);
+        Alert.alert("Request Sent", `You have requested SGD ${amount} from ${linkedName}.`);
+        
+    } catch (e: any) {
+        console.error("Request Error:", e);
+        Alert.alert("Error", "Failed to send request.");
+        setInstruction("Request Failed.");
+    } finally {
+        setIsRequestProcessing(false);
+        setTimeout(() => resetTransferState(), 2000);
+    }
   };
 
   const executeTransfer = async (amount: number) => {
     setIsTransferSuccessful(true);
-    
-    // Update balance
-    const newBalance = balance - amount;
-    const newLinkedBalance = (linkedBalance || 0) + amount;
-    setBalance(newBalance);
-    setLinkedBalance(newLinkedBalance);
+    setInstruction("Transferring...");
 
-    // Create transaction (Positive for Recipient)
-    const newTransaction = {
-        id: Date.now(), 
-        name: linkedName, // This will appear as "Money from User" in a real scenario, but here we just list the person involved
-        amount: amount,
-        date: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }),
-    };
+    try {
+        // use secure rpc
+        // sender: me
+        // receiver: them
+        const { data, error } = await supabase.rpc('transfer_funds', {
+            sender_account_no: myAccountNo,     
+            receiver_account_no: accountNo, 
+            amount: amount,
+            description: `Transfer to ${linkedName}`
+        });
 
-    setTransactions(prev => [newTransaction, ...prev]);
-    setInstruction(`Transferred SGD ${amount}!`);
+        if (error) throw error;
+        if (data && data.error) throw new Error(data.error);
 
-    // reset after delay when clicking
-    setTimeout(() => {
-        resetTransferState();
-    }, 1500);
-
-    // Update database
-    if (currentUserEmail) {
-        try {
-            // Update User Balance (Decrease)
-            // Try updating Localaccounts first
-            const { error: localError, data: localData } = await supabase
-                .from('Localaccounts')
-                .update({ balance: newBalance })
-                .eq('emailAddress', currentUserEmail)
-                .select();
-
-            // If no rows were updated in Localaccounts, try Foreignaccounts
-            if (!localData || localData.length === 0) {
-               await supabase
-                .from('Foreignaccounts')
-                .update({ balance: newBalance })
-                .eq('emailAddress', currentUserEmail);
-            }
+        // success - ui update
+        setBalance(prev => prev - amount); 
+        setLinkedBalance(prev => (prev !== null ? prev + amount : null));
         
-        } catch (err) {
-            console.error("Failed to update user balance in DB", err);
-        }
+        const newTransaction = {
+            id: Date.now(), 
+            name: `You (${myAccountName || 'Me'})`, 
+            amount: -amount,
+            date: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }),
+        };
+
+        setTransactions(prev => [newTransaction, ...prev]);
+        setInstruction(`Transferred SGD ${amount}!`);
+
+    } catch (e: any) {
+         console.error("Transfer Error:", e);
+         Alert.alert("Transfer Failed", e.message || "Unknown error");
+         setInstruction("Transfer Failed.");
+    } finally {
+        setTimeout(() => resetTransferState(), 1500);
     }
   };
 
-  const handleModeChange = (newMode: 'pay' | 'request') => {
-      setMode(newMode);
-      if (newMode === 'request') {
-          resetTransferState("Tap to select request amount.");
-      } else {
-          resetTransferState();
-      }
-  };
+  /* mode switcher removed */
 
   return (
     <ScrollView className="flex-1 bg-white p-4">
-      <View className="flex-row items-center mb-6 mt-2 justify-between">
+      <View className="flex-row items-center mb-6 mt-12 justify-between">
         <View className="flex-row items-center">
-            <TouchableOpacity onPress={() => router.back()} className="mr-3 p-1">
+            <TouchableOpacity onPress={() => {  
+              if(navigation.canGoBack()) {
+                navigation.goBack();
+              } else {
+                router.back();
+              }
+            }} className="mr-3 p-2">
             <MaterialIcons name="arrow-back" size={24} color="#374151" />
             </TouchableOpacity>
             <Text className="text-xl font-bold text-gray-800">Two-Tap Pay</Text>
@@ -381,32 +437,18 @@ export default function TwoTapPay() {
         </TouchableOpacity>
       </View>
 
-      {/* Mode Switcher */}
-      <View className="flex-row bg-gray-100 p-1 rounded-lg mb-6 h-12">
-        <TouchableOpacity 
-            onPress={() => handleModeChange('pay')}
-            className={`flex-1 items-center justify-center rounded-md ${mode === 'pay' ? 'bg-white shadow-sm' : ''}`}
-        >
-            <Text className={`font-semibold ${mode === 'pay' ? 'text-blue-600' : 'text-gray-500'}`}>Pay Mode</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-            onPress={() => handleModeChange('request')}
-            className={`flex-1 items-center justify-center rounded-md ${mode === 'request' ? 'bg-white shadow-sm' : ''}`}
-        >
-            <Text className={`font-semibold ${mode === 'request' ? 'text-blue-600' : 'text-gray-500'}`}>Request Mode</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Balance (Source) */}
+      {/* mode switcher removed */}
+      
+      {/* balance (source) */}
       <View className="items-center mb-4">
         <Text className="text-gray-500 text-lg mb-1">Your Balance</Text>
         <Text className="text-4xl font-bold text-gray-900">{formatCurrency(balance)}</Text>
       </View>
 
-      {/* linked pay info (Destination) */}
-      <View className={`items-center mb-8 p-4 rounded-xl border ${mode === 'pay' ? 'bg-blue-50 border-blue-100' : 'bg-green-50 border-green-100'}`}>
+      {/* linked pay info (destination) */}
+      <View className="items-center mb-8 p-4 rounded-xl border bg-gray-50 border-gray-100">
         <Text className="text-gray-500 text-xs uppercase tracking-wide mb-1 font-bold">
-            {mode === 'pay' ? 'Paying to' : 'Requesting from'}
+            Linked With
         </Text>
         <Text className="text-xl font-bold text-gray-800">{linkedName}</Text>
         <Text className="text-gray-500 text-base font-medium">{accountNo}</Text>
@@ -417,25 +459,26 @@ export default function TwoTapPay() {
         )}
       </View>
 
-      {/* Instruction */}
-      <Text className="text-center text-lg text-blue-600 font-medium mb-4 min-h-[28px]">
-        {instruction}
-      </Text>
+      {/* instruction & status */}
+      <View className="items-center mb-4 min-h-[40px]">
+        {isRequestProcessing && (
+            <ActivityIndicator size="small" color="#2563eb" className="mb-2" />
+        )}
+        <Text className="text-center text-lg text-blue-600 font-medium">
+            {instruction}
+        </Text>
+      </View>
 
-      {/* Transfer Buttons */}
-      <View className="flex-row flex-wrap justify-center gap-4 mb-8">
+      {/* transfer buttons */}
+      <View className="flex-row flex-wrap justify-center gap-4 mb-4">
         {buttonAmounts.map((amt, index) => {
           const isSelected = selectedAmount === amt;
-          const isSuccess = isSelected && isTransferSuccessful;
           
           let bgClass = 'bg-white border-blue-500';
           let textClass = 'text-blue-500';
 
-          if (isSuccess) {
-            bgClass = 'bg-green-500 border-green-500';
-            textClass = 'text-white';
-          } else if (isSelected) {
-            bgClass = 'bg-blue-500 border-blue-500';
+          if (isSelected) {
+            bgClass = 'bg-blue-600 border-blue-600';
             textClass = 'text-white';
           }
 
@@ -453,7 +496,26 @@ export default function TwoTapPay() {
         })}
       </View>
 
-      {/* Transactions List */}
+      {/* action buttons (visible when amount selected) */}
+      {selectedAmount !== null && (
+        <View className="flex-row gap-4 mb-8">
+            <TouchableOpacity 
+                onPress={() => executeTransfer(selectedAmount)}
+                className="flex-1 bg-blue-600 py-4 rounded-xl items-center shadow-sm"
+            >
+                <Text className="text-white font-bold text-lg">Pay ${selectedAmount}</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+                onPress={() => handleRequest(selectedAmount)}
+                className="flex-1 bg-white border-2 border-blue-600 py-4 rounded-xl items-center shadow-sm"
+            >
+                <Text className="text-blue-600 font-bold text-lg">Request ${selectedAmount}</Text>
+            </TouchableOpacity>
+        </View>
+      )}
+
+      {/* transactions list */}
       <View className="mb-8">
         <Text className="text-xl font-bold text-gray-800 mb-4 ml-2">Recent Transactions</Text>
         {transactions.map((tx) => {
@@ -473,7 +535,7 @@ export default function TwoTapPay() {
         })}
       </View>
 
-      {/* Custom Amount Edit Modal */}
+      {/* custom amount edit modal */}
       <Modal
         animationType="slide"
         transparent={true}
@@ -519,7 +581,8 @@ export default function TwoTapPay() {
         </KeyboardAvoidingView>
       </Modal>
 
-      {/* Request QR Modal */}
+
+      {/* 
       <Modal
         animationType="slide"
         presentationStyle="pageSheet"
@@ -557,6 +620,7 @@ export default function TwoTapPay() {
             </TouchableOpacity>
         </View>
       </Modal>
+      */}
     </ScrollView>
   );
 }

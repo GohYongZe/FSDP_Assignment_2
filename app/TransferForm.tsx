@@ -1,18 +1,18 @@
 import React from 'react';
-import { StyleSheet, View, Text, TextInput, TouchableOpacity, ScrollView, SafeAreaView } from 'react-native';
+import { SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome5';
-// 1. Import useLocalSearchParams and useRouter from expo-router
+// 1. import expo router hooks
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
 const TransferForm = () => {
-  // 2. Use the hook to get the 'type' param instead of 'route.params'
+  // 2. get params
   const { type } = useLocalSearchParams(); 
   const router = useRouter();
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        {/* 3. Use router.back() instead of navigation.goBack() */}
+        {/* 3. navigation back */}
         <TouchableOpacity onPress={() => router.back()}>
           <Icon name="chevron-left" size={20} color="#005eb8" />
         </TouchableOpacity>

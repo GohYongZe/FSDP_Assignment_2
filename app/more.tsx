@@ -579,13 +579,13 @@ const More = ({ navigation }: MoreProps) => {
     ]);
   };
 
-  // All menu items with their categories
+  // all menu items
   const allMenuItems: MenuItem[] = [
-    // Apply
+    // apply
     { id: "1", icon: "user-friends", label: t.accounts, category: t.apply },
     { id: "2", icon: "credit-card", label: t.cards, category: t.apply },
 
-    // Card Services
+    // card services
     {
       id: "3",
       icon: "clipboard-list",
@@ -634,7 +634,7 @@ const More = ({ navigation }: MoreProps) => {
       icon: "exchange-alt",
       label: t.transferMoney,
       category: t.paymentsTransfers,
-      route: "Transfer",
+      route: "/transferscreen",
     },
     {
       id: "11",

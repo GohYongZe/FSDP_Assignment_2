@@ -50,14 +50,14 @@ serve(async (req) => {
 
       if (!sender || !receiver) throw new Error("Account not found")
 
-      const sBal = parseFloat(sender.balance.replace('S$', '').replace(',', ''))
-      const rBal = parseFloat(receiver.balance.replace('S$', '').replace(',', ''))
+      const sBal = parseFloat(typeof sender.balance === 'string' ? sender.balance.replace('S$', '').replace(',', '') : sender.balance)
+      const rBal = parseFloat(typeof receiver.balance === 'string' ? receiver.balance.replace('S$', '').replace(',', '') : receiver.balance)
 
       if (sBal < amount) return new Response(JSON.stringify({ message: "Insufficient funds" }), { headers: corsHeaders })
 
       // Update both balances
-      await supabase.from('Localaccounts').update({ balance: `S$ ${(sBal - amount).toFixed(2)}` }).eq('name', userName)
-      await supabase.from('Localaccounts').update({ balance: `S$ ${(rBal + amount).toFixed(2)}` }).eq('name', recipient)
+      await supabase.from('Localaccounts').update({ balance: (sBal - amount).toFixed(2) }).eq('name', userName)
+      await supabase.from('Localaccounts').update({ balance: (rBal + amount).toFixed(2) }).eq('name', recipient)
 
       return new Response(JSON.stringify({ message: `Success! Sent S$${amount} to ${recipient}.` }), { headers: corsHeaders })
     }

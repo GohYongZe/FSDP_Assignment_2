@@ -24,7 +24,7 @@ export default function LinkToAccount() {
     if (params.name) setNickname(params.name as string);
   }, [params]);
   
-  // Camera State
+  // camera state
   const [showScanner, setShowScanner] = useState(false);
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
@@ -139,7 +139,7 @@ export default function LinkToAccount() {
         Alert.alert(
           'Success', 
           'Account link request sent successfully!', 
-          [{ text: 'OK', onPress: () => router.back() }] // back to the previous screen
+          [{ text: 'OK', onPress: () => router.back() }] // back
         );
       }
     } catch (error) {
@@ -209,7 +209,7 @@ export default function LinkToAccount() {
         </TouchableOpacity>
       </View>
 
-      {/* Camera Modal */}
+      {/* camera modal */}
       <Modal
         visible={showScanner}
         animationType="slide"

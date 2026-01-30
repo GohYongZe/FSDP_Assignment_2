@@ -1,6 +1,8 @@
+import { useNavigation } from "@react-navigation/native";
 import { useRouter } from "expo-router";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   SafeAreaView,
   ScrollView,
   StatusBar,
@@ -10,26 +12,125 @@ import {
   View,
 } from "react-native";
 import Icon from "react-native-vector-icons/FontAwesome5";
+import { supabase } from '../lib/supabase';
 
-const TransferScreen = ({ navigation }: { navigation: any }) => {
-  const router = useRouter();
-  const recipients = [
-    { id: "1", name: "John L.", initials: "JL", color: "#005eb8" },
-    { id: "2", name: "Mary Y.", initials: "MY", color: "#da291c" },
-    { id: "3", name: "Alex B.", initials: "AB", color: "#005eb8" },
-    { id: "4", name: "Chen S.", initials: "CS", color: "#888" },
-    { id: "5", name: "Tan H.", initials: "TH", color: "#005eb8" },
-    { id: "6", name: "Lim C.", initials: "LC", color: "#28a745" },
-  ];
+const TransferScreen = () => {
+  const router = useRouter(); // keep for backup
+  const navigation = useNavigation();
+  
+  const [recipients, setRecipients] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const actions = [
-    { name: "PayNow", icon: "mobile-alt" },
-    { name: "Local Transfer", icon: "university" },
-    { name: "Overseas Transfer", icon: "plane-departure" },
-    { name: "Pay Bills", icon: "file-invoice-dollar" },
-    { name: "Credit Card Payment", icon: "credit-card" },
-    { name: "Request Funds", icon: "hand-holding-usd" },
+    { name: "PayNow", icon: "mobile-alt", route: "/paynow" },
+    { name: "GiveNow", icon: "hand-holding-usd", route: "/givenow" },
+    { name: "Pay Bills", icon: "file-invoice-dollar", route: null },
+    { name: "Local Transfer", icon: "university", route: null },
+    { name: "Overseas Transfer", icon: "plane-departure", route: null },
+    { name: "Credit Card Payment", icon: "credit-card", route: null },
   ];
+
+  useEffect(() => {
+     fetchRecipients();
+  }, []);
+
+  const fetchRecipients = async () => {
+      try {
+          // 1. get user
+          const { data: { session } } = await supabase.auth.getSession();
+          if (!session?.user?.email) return;
+
+          // 2. get my account no
+          let myAccountNo = '';
+          let { data: localAcc } = await supabase
+              .from('Localaccounts')
+              .select('accountNo')
+              .eq('emailAddress', session.user.email)
+              .single();
+          
+          if (localAcc) {
+              myAccountNo = localAcc.accountNo;
+          } else {
+              let { data: foreignAcc } = await supabase
+                  .from('Foreignaccounts')
+                  .select('accountNo')
+                  .eq('emailAddress', session.user.email)
+                  .single();
+               if (foreignAcc) myAccountNo = foreignAcc.accountNo;
+          }
+
+          if (!myAccountNo) return;
+
+          // 3. fetch recent transactions
+          const { data: txData, error: txError } = await supabase
+              .from('TransactionsHistory')
+              .select('receiveraccountNo, created_at')
+              .eq('senderaccountNo', myAccountNo)
+              .order('created_at', { ascending: false })
+              .limit(50); // get 50 to find dupes
+
+          if (txError || !txData) return;
+
+          // 4. filter unique receivers
+          const uniqueReceivers = new Set();
+          const uniqueList: string[] = [];
+          
+          for (const tx of txData) {
+              if (tx.receiveraccountNo && !uniqueReceivers.has(tx.receiveraccountNo)) {
+                  uniqueReceivers.add(tx.receiveraccountNo);
+                  uniqueList.push(tx.receiveraccountNo);
+                  if (uniqueList.length >= 10) break; // limit to 10
+              }
+          }
+
+          // 5. fetch names for receivers
+          const recipientsWithDetails = await Promise.all(uniqueList.map(async (accNo) => {
+               // try local
+               let { data: recLocal } = await supabase
+                   .from('Localaccounts')
+                   .select('name')
+                   .eq('accountNo', accNo)
+                   .single();
+               
+               if (recLocal) return { accountNo: accNo, name: recLocal.name };
+
+               // try foreign
+               let { data: recForeign } = await supabase
+                   .from('Foreignaccounts')
+                   .select('name')
+                   .eq('accountNo', accNo)
+                   .single();
+               
+               if (recForeign) return { accountNo: accNo, name: recForeign.name };
+
+               return { accountNo: accNo, name: `User ${accNo.slice(-4)}` };
+          }));
+
+          // 6. format for ui
+          const uiData = recipientsWithDetails.map((item, index) => ({
+              id: item.accountNo,
+              name: item.name,
+              initials: item.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase(),
+              color: index % 2 === 0 ? "#005eb8" : "#da291c" // alternating colors
+          }));
+
+          setRecipients(uiData);
+
+      } catch (err) {
+          console.error(err);
+      } finally {
+          setLoading(false);
+      }
+  };
+
+  const handleActionPress = (action: any) => {
+      if (action.route) {
+          router.push(action.route);
+      } else {
+          // placeholder
+          console.log(`Pressed ${action.name}`);
+      }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -49,7 +150,11 @@ const TransferScreen = ({ navigation }: { navigation: any }) => {
           <Text style={styles.sectionTitle}>Transfers</Text>
           <View style={styles.actionGrid}>
             {actions.map((action, index) => (
-              <TouchableOpacity key={index} style={styles.actionItem}>
+              <TouchableOpacity 
+                key={index} 
+                style={styles.actionItem}
+                onPress={() => handleActionPress(action)}
+              >
                 <Icon name={action.icon} size={28} color="#da291c" />
                 <Text style={styles.actionLabel}>{action.name}</Text>
               </TouchableOpacity>
@@ -59,28 +164,38 @@ const TransferScreen = ({ navigation }: { navigation: any }) => {
 
         {/* Recent Recipients */}
         <View style={styles.recipientsSection}>
-          <Text style={styles.sectionTitle}>Recent Recipients</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.recipientList}
-          >
-            {recipients.map((item) => (
-              <View key={item.id} style={styles.recipientItem}>
-                <View
-                  style={[
-                    styles.recipientIcon,
-                    { backgroundColor: item.color },
-                  ]}
+          <Text style={[styles.sectionTitle, { marginLeft: 15 }]}>Recent Recipients</Text>
+          {loading ? (
+             <ActivityIndicator color="#da291c" />
+          ) : recipients.length === 0 ? (
+             <Text style={{ marginLeft: 15, color: '#888' }}>No recent transfers found.</Text>
+          ) : (
+            <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.recipientList}
+            >
+                {recipients.map((item) => (
+                <TouchableOpacity 
+                     key={item.id} 
+                     style={styles.recipientItem}
+                     onPress={() => router.push({ pathname: '/paynowscreen', params: { accountNo: item.id, nickName: item.name }})}
                 >
-                  <Text style={styles.recipientInitials}>{item.initials}</Text>
-                </View>
-                <Text style={styles.recipientName} numberOfLines={1}>
-                  {item.name}
-                </Text>
-              </View>
-            ))}
-          </ScrollView>
+                    <View
+                    style={[
+                        styles.recipientIcon,
+                        { backgroundColor: item.color },
+                    ]}
+                    >
+                    <Text style={styles.recipientInitials}>{item.initials}</Text>
+                    </View>
+                    <Text style={styles.recipientName} numberOfLines={1}>
+                    {item.name}
+                    </Text>
+                </TouchableOpacity>
+                ))}
+            </ScrollView>
+          )}
         </View>
 
         {/* Promo Card */}
@@ -104,6 +219,7 @@ const TransferScreen = ({ navigation }: { navigation: any }) => {
       <View style={styles.bottomNav}>
         <TouchableOpacity
           style={styles.navItem}
+          // @ts-ignore
           onPress={() => router.push("/homepage")}
         >
           <Icon name="home" size={22} color="#888" />
@@ -111,7 +227,7 @@ const TransferScreen = ({ navigation }: { navigation: any }) => {
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.navItem, styles.navItemActive]}
-          onPress={() => router.push("/transferscreen")}
+          
         >
           <Icon name="exchange-alt" size={22} color="#da291c" />
           <Text style={[styles.navText, styles.navTextActive]}>
@@ -120,6 +236,7 @@ const TransferScreen = ({ navigation }: { navigation: any }) => {
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.navItem}
+          // @ts-ignore
           onPress={() => router.push("/more")}
         >
           <Icon name="th-large" size={22} color="#888" />

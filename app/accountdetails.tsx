@@ -19,7 +19,7 @@ import Icon from "react-native-vector-icons/FontAwesome5";
 import { supabase } from "../lib/supabase";
 import { getTranslation } from "../lib/translations";
 
-// Enable LayoutAnimation for Android
+// enable animation for android
 if (
   Platform.OS === "android" &&
   UIManager.setLayoutAnimationEnabledExperimental
@@ -38,15 +38,15 @@ const AccountDetailsScreen = ({
   const [selectedMonth, setSelectedMonth] = useState("Jan 2026");
   const [language, setLanguage] = useState("en");
 
-  // Get account data from params with fallbacks
+  // get account data from params
   const accountType = (params.accountType as string) || "OCBC FRANK Account";
   const balance = (params.balance as string) || "1,234.56";
   const accountNumber = (params.accountNumber as string) || "";
 
-  // Available months
+  // available months
   const months = ["Jan 2026", "Nov 2025", "Oct 2025"];
 
-  // Helper function to translate month names
+  // translate month names
   const translateMonth = (monthYear: string) => {
     const [month, year] = monthYear.split(" ");
     const monthKey = month.toLowerCase();
