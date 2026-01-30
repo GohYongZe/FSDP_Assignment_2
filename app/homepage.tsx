@@ -385,10 +385,8 @@ export default function HomePage() {
       <ScrollView className="flex-1 bg-gray-100">
         {/* Header Section */}
         <ImageBackground
-          source={{
-            uri: "https://images.unsplash.com/photo-1565967511849-76a60a16170",
-          }}
-          className="h-56 p-5 justify-between"
+          source={require("../assets/images/homepage_bg.png")}
+          className="h-100 p-5 justify-between"
         >
           <View className="flex-row justify-between items-center mt-8">
             <FontAwesome6 name="expand" size={24} color="black" />
@@ -401,7 +399,7 @@ export default function HomePage() {
               </TouchableOpacity>
             </View>
           </View>
-          <View className="mb-8">
+          <View className="mb-8" style={{ marginTop: 100 }}>
             <Text className="text-3xl font-bold text-gray-800 mb-3">
               Welcome, {userName}
             </Text>
@@ -488,7 +486,7 @@ export default function HomePage() {
         {/* Account Details Card */}
         {selectedAccount ? (
           <TouchableOpacity
-            className="bg-orange-50 mx-4 p-5 rounded-xl border border-gray-200"
+            className="bg-[#f6ecec] mx-4 p-5 rounded-xl border border-gray-200"
             onPress={() =>
               router.push({
                 pathname: "/accountdetails",
@@ -579,7 +577,7 @@ export default function HomePage() {
             </View>
           </TouchableOpacity>
         ) : (
-          <View className="bg-orange-50 mx-4 p-5 rounded-xl border border-gray-200">
+          <View className="bg-[#f6ecec] mx-4 p-5 rounded-xl border border-gray-200">
             <Text className="text-center text-gray-500">
               No accounts found. Please contact support.
             </Text>
@@ -591,6 +589,9 @@ export default function HomePage() {
           <View className="mx-4 mt-4 mb-32">
             <Text className="text-xl font-bold text-gray-800 mb-3 mt-3">
               Recent Transactions
+            </Text>
+            <Text className="text-sm text-gray-500 mb-3">
+              Up to 50 (last 7 days only)
             </Text>
 
             {/* Transaction 1 */}

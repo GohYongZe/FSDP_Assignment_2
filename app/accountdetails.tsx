@@ -33,11 +33,15 @@ const AccountDetailsScreen = ({
   const router = useRouter();
   const params = useLocalSearchParams();
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [selectedMonth, setSelectedMonth] = useState("Jan 2026");
 
   // Get account data from params with fallbacks
   const accountType = (params.accountType as string) || "OCBC FRANK Account";
   const balance = (params.balance as string) || "1,234.56";
   const accountNumber = (params.accountNumber as string) || "";
+
+  // Available months
+  const months = ["Jan 2026", "Nov 2025", "Oct 2025"];
 
   const toggleAdvanced = () => {
     // This creates a smooth slide-down effect when the button is pressed
@@ -66,7 +70,7 @@ const AccountDetailsScreen = ({
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" />
+      <StatusBar barStyle="dark-content" />
 
       {/* Top Bar */}
       <View style={styles.topBar}>
@@ -74,41 +78,115 @@ const AccountDetailsScreen = ({
           onPress={() => router.push("/homepage")}
           style={styles.backButton}
         >
-          <Icon name="chevron-left" size={20} color="#fff" />
+          <Icon name="chevron-left" size={20} color="#333" />
         </TouchableOpacity>
-        <Text style={styles.headerText}>Account Details</Text>
-        <TouchableOpacity onPress={handleMenuPress}>
-          <Icon name="ellipsis-v" size={18} color="#fff" />
+        <View style={{ flex: 1 }} />
+        <TouchableOpacity onPress={() => router.push("/more")}>
+          <Icon name="cog" size={20} color="#333" />
         </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Product Header Card */}
-        <View style={styles.productHeader}>
-          <Text style={styles.productTitle}>{accountType}</Text>
-          <Text style={styles.balanceText}>Available Balance: S${balance}</Text>
-        </View>
+        {/* Balance Information */}
+        <View style={styles.balanceContainer}>
+          <Text style={styles.accountTypeHeader}>{accountType}</Text>
+          <Text style={styles.accountNumberText}>
+            {(() => {
+              const accNo = accountNumber || "123456789";
+              // Format as XXX-XXXXX-XXX
+              if (accNo.length >= 9) {
+                return `${accNo.slice(0, 3)}-${accNo.slice(3, -3)}-${accNo.slice(-3)}`;
+              }
+              return accNo;
+            })()}
+          </Text>
 
-        <Text style={styles.sectionTitle}>Recent Activity</Text>
-
-        {/* Transaction List */}
-        <View style={styles.transactionList}>
-          <View style={styles.transactionItem}>
-            <View>
-              <Text style={styles.transName}>Salary Deposit</Text>
-              <Text style={styles.transDate}>30 Oct 2025</Text>
-            </View>
-            <Text style={[styles.amount, styles.deposit]}>+ S$4,500.00</Text>
+          <View style={styles.balanceColumn}>
+            <Text style={styles.balanceLabel}>Total Balance</Text>
+            <Text style={styles.balanceValue}>{balance} SGD</Text>
           </View>
-
-          <View style={styles.transactionItem}>
-            <View>
-              <Text style={styles.transName}>Supermarket Purchase</Text>
-              <Text style={styles.transDate}>01 Nov 2025</Text>
-            </View>
-            <Text style={[styles.amount, styles.expense]}>- S$85.50</Text>
+          <View style={styles.balanceColumn}>
+            <Text style={styles.balanceLabel}>Available Balance</Text>
+            <Text style={styles.balanceValue}>{balance} SGD</Text>
           </View>
         </View>
+
+        <Text style={styles.sectionTitle}>Transactions</Text>
+
+        {/* Month Filter Slider */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.monthFilterContainer}
+          contentContainerStyle={styles.monthFilterContent}
+        >
+          {months.map((month) => (
+            <TouchableOpacity
+              key={month}
+              style={[
+                styles.monthFilterButton,
+                selectedMonth === month && styles.monthFilterButtonActive,
+              ]}
+              onPress={() => setSelectedMonth(month)}
+            >
+              <Text
+                style={[
+                  styles.monthFilterText,
+                  selectedMonth === month && styles.monthFilterTextActive,
+                ]}
+              >
+                {month}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+
+        {/* Transaction List - Conditional Rendering Based on Selected Month */}
+        {selectedMonth === "Jan 2026" && (
+          <View style={styles.transactionList}>
+            <View style={styles.transactionItem}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.transDate}>28 Jan</Text>
+                <Text style={styles.transName}>TRANSFER</Text>
+                <Text style={styles.transDetails}>From John Doe</Text>
+              </View>
+              <Text style={[styles.amount, styles.deposit]}>+150.00</Text>
+            </View>
+
+            <View style={styles.transactionItem}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.transDate}>27 Jan</Text>
+                <Text style={styles.transName}>PAYMENT</Text>
+                <Text style={styles.transDetails}>Shopping Mall Purchase</Text>
+              </View>
+              <Text style={[styles.amount, styles.expense]}>-45.50</Text>
+            </View>
+          </View>
+        )}
+
+        {selectedMonth === "Nov 2025" && (
+          <View style={styles.transactionList}>
+            <View style={styles.transactionItem}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.transDate}>01 Nov</Text>
+                <Text style={styles.transName}>Supermarket Purchase</Text>
+              </View>
+              <Text style={[styles.amount, styles.expense]}>-85.50</Text>
+            </View>
+          </View>
+        )}
+
+        {selectedMonth === "Oct 2025" && (
+          <View style={styles.transactionList}>
+            <View style={styles.transactionItem}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.transDate}>30 Oct</Text>
+                <Text style={styles.transName}>Salary Deposit</Text>
+              </View>
+              <Text style={[styles.amount, styles.deposit]}>+4,500.00</Text>
+            </View>
+          </View>
+        )}
 
         {/* Toggle Button */}
         <TouchableOpacity style={styles.toggleButton} onPress={toggleAdvanced}>
@@ -188,23 +266,81 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 20,
     paddingTop: 40,
-    backgroundColor: "#da291c",
-    borderBottomWidth: 1,
-    borderBottomColor: "#eee",
+    backgroundColor: "#f6ecec",
+    borderBottomWidth: 0,
   },
   headerText: { fontSize: 20, fontWeight: "700", color: "#fff" },
   backButton: { padding: 8 },
-  scrollContent: { padding: 15, paddingBottom: 100 },
-  productHeader: {
-    backgroundColor: "#e8a87c", // Match original color
-    padding: 30,
-    borderRadius: 12,
+  scrollContent: { paddingBottom: 100 },
+  balanceContainer: {
+    backgroundColor: "#f6ecec",
+    padding: 20,
+    paddingTop: 0,
     marginBottom: 25,
   },
-  productTitle: { color: "white", fontSize: 22, fontWeight: "700" },
-  balanceText: { color: "white", fontSize: 16, opacity: 0.9, marginTop: 5 },
-  sectionTitle: { fontSize: 18, fontWeight: "700", marginBottom: 15 },
-  transactionList: { marginBottom: 20 },
+  accountTypeHeader: {
+    fontSize: 26,
+    fontWeight: "700",
+    color: "#333",
+    marginBottom: 5,
+  },
+  accountNumberText: {
+    fontSize: 15,
+    color: "#666",
+    fontWeight: "500",
+    marginBottom: 35,
+  },
+  balanceColumn: {
+    marginBottom: 15,
+  },
+  balanceRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  balanceLabel: {
+    fontSize: 15,
+    color: "#666",
+    fontWeight: "500",
+    marginBottom: 5,
+  },
+  balanceValue: { fontSize: 18, fontWeight: "700", color: "#333" },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    marginBottom: 15,
+    paddingHorizontal: 15,
+  },
+  monthFilterContainer: {
+    marginBottom: 20,
+    paddingHorizontal: 15,
+  },
+  monthFilterContent: {
+    paddingRight: 0,
+  },
+  monthFilterButton: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+    backgroundColor: "#f0f0f0",
+    marginRight: 10,
+    borderWidth: 1,
+    borderColor: "#e0e0e0",
+  },
+  monthFilterButtonActive: {
+    backgroundColor: "#da291c",
+    borderColor: "#da291c",
+  },
+  monthFilterText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#666",
+  },
+  monthFilterTextActive: {
+    color: "#fff",
+  },
+  transactionList: { marginBottom: 10, paddingHorizontal: 15 },
   transactionItem: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -214,7 +350,8 @@ const styles = StyleSheet.create({
     borderBottomColor: "#eee",
   },
   transName: { fontSize: 16, fontWeight: "600", color: "#333" },
-  transDate: { fontSize: 13, color: "#888", marginTop: 2 },
+  transDate: { fontSize: 12, color: "#888", marginBottom: 2 },
+  transDetails: { fontSize: 14, color: "#666", marginTop: 2 },
   amount: { fontSize: 16, fontWeight: "700" },
   deposit: { color: "#28a745" },
   expense: { color: "#da291c" },
