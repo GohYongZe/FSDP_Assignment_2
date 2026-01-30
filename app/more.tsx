@@ -80,6 +80,8 @@ const More = ({ navigation }: MoreProps) => {
       selectLanguage: "Select Language",
       languageChanged: "Language Changed",
       languageSwitched: "Language switched to",
+      logoutConfirm: "Are you sure you want to logout?",
+      cancel: "Cancel",
       accounts: "Accounts",
       cards: "Cards",
       reportLostCard: "Report lost card",
@@ -128,6 +130,8 @@ const More = ({ navigation }: MoreProps) => {
       selectLanguage: "选择语言",
       languageChanged: "语言已更改",
       languageSwitched: "语言已切换至",
+      logoutConfirm: "您确定要登出吗？",
+      cancel: "取消",
       accounts: "账户",
       cards: "卡片",
       reportLostCard: "报失卡片",
@@ -176,6 +180,8 @@ const More = ({ navigation }: MoreProps) => {
       selectLanguage: "Pilih Bahasa",
       languageChanged: "Bahasa Ditukar",
       languageSwitched: "Bahasa ditukar kepada",
+      logoutConfirm: "Adakah anda pasti mahu log keluar?",
+      cancel: "Batal",
       accounts: "Akaun",
       cards: "Kad",
       reportLostCard: "Laporkan kad hilang",
@@ -562,10 +568,11 @@ const More = ({ navigation }: MoreProps) => {
   };
 
   const handleLogout = () => {
-    Alert.alert("Logout", "Are you sure you want to logout?", [
-      { text: "Cancel", style: "cancel" },
+    const t = translations[selectedLanguage] || translations.en;
+    Alert.alert(t.logout, t.logoutConfirm, [
+      { text: t.cancel, style: "cancel" },
       {
-        text: "Logout",
+        text: t.logout,
         style: "destructive",
         onPress: () => router.replace("/landing"),
       },

@@ -1,6 +1,7 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { NavigationProp } from "@react-navigation/native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Alert,
   LayoutAnimation,
@@ -16,6 +17,7 @@ import {
 } from "react-native";
 import Icon from "react-native-vector-icons/FontAwesome5";
 import { supabase } from "../lib/supabase";
+import { getTranslation } from "../lib/translations";
 
 // Enable LayoutAnimation for Android
 if (
@@ -34,6 +36,7 @@ const AccountDetailsScreen = ({
   const params = useLocalSearchParams();
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState("Jan 2026");
+  const [language, setLanguage] = useState("en");
 
   // Get account data from params with fallbacks
   const accountType = (params.accountType as string) || "OCBC FRANK Account";
@@ -43,6 +46,29 @@ const AccountDetailsScreen = ({
   // Available months
   const months = ["Jan 2026", "Nov 2025", "Oct 2025"];
 
+  // Helper function to translate month names
+  const translateMonth = (monthYear: string) => {
+    const [month, year] = monthYear.split(" ");
+    const monthKey = month.toLowerCase();
+    return `${getTranslation(monthKey, language)} ${year}`;
+  };
+
+  // Load language preference
+  const loadLanguage = async () => {
+    try {
+      const savedLanguage = await AsyncStorage.getItem("selectedLanguage");
+      if (savedLanguage) {
+        setLanguage(savedLanguage);
+      }
+    } catch (error) {
+      console.error("Error loading language:", error);
+    }
+  };
+
+  useEffect(() => {
+    loadLanguage();
+  }, []);
+
   const toggleAdvanced = () => {
     // This creates a smooth slide-down effect when the button is pressed
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -50,22 +76,29 @@ const AccountDetailsScreen = ({
   };
 
   const handleMenuPress = () => {
-    Alert.alert("Account Menu", "Choose an option", [
-      {
-        text: "Logout",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            await supabase.auth.signOut();
-            router.replace("/landing");
-          } catch (error) {
-            console.error("Error logging out:", error);
-            Alert.alert("Error", "Failed to logout");
-          }
+    Alert.alert(
+      getTranslation("logout", language),
+      getTranslation("logoutConfirm", language),
+      [
+        {
+          text: getTranslation("logout", language),
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await supabase.auth.signOut();
+              router.replace("/landing");
+            } catch (error) {
+              console.error("Error logging out:", error);
+              Alert.alert(
+                getTranslation("error", language),
+                getTranslation("failedLogout", language),
+              );
+            }
+          },
         },
-      },
-      { text: "Cancel", style: "cancel" },
-    ]);
+        { text: getTranslation("cancel", language), style: "cancel" },
+      ],
+    );
   };
 
   return (
@@ -102,16 +135,22 @@ const AccountDetailsScreen = ({
           </Text>
 
           <View style={styles.balanceColumn}>
-            <Text style={styles.balanceLabel}>Total Balance</Text>
+            <Text style={styles.balanceLabel}>
+              {getTranslation("totalBalance", language)}
+            </Text>
             <Text style={styles.balanceValue}>{balance} SGD</Text>
           </View>
           <View style={styles.balanceColumn}>
-            <Text style={styles.balanceLabel}>Available Balance</Text>
+            <Text style={styles.balanceLabel}>
+              {getTranslation("availableBalance", language)}
+            </Text>
             <Text style={styles.balanceValue}>{balance} SGD</Text>
           </View>
         </View>
 
-        <Text style={styles.sectionTitle}>Transactions</Text>
+        <Text style={styles.sectionTitle}>
+          {getTranslation("transactions", language)}
+        </Text>
 
         {/* Month Filter Slider */}
         <ScrollView
@@ -135,7 +174,7 @@ const AccountDetailsScreen = ({
                   selectedMonth === month && styles.monthFilterTextActive,
                 ]}
               >
-                {month}
+                {translateMonth(month)}
               </Text>
             </TouchableOpacity>
           ))}
@@ -147,8 +186,12 @@ const AccountDetailsScreen = ({
             <View style={styles.transactionItem}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.transDate}>28 Jan</Text>
-                <Text style={styles.transName}>TRANSFER</Text>
-                <Text style={styles.transDetails}>From John Doe</Text>
+                <Text style={styles.transName}>
+                  {getTranslation("transfer", language).toUpperCase()}
+                </Text>
+                <Text style={styles.transDetails}>
+                  {getTranslation("from", language)} John Doe
+                </Text>
               </View>
               <Text style={[styles.amount, styles.deposit]}>+150.00</Text>
             </View>
@@ -156,8 +199,12 @@ const AccountDetailsScreen = ({
             <View style={styles.transactionItem}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.transDate}>27 Jan</Text>
-                <Text style={styles.transName}>PAYMENT</Text>
-                <Text style={styles.transDetails}>Shopping Mall Purchase</Text>
+                <Text style={styles.transName}>
+                  {getTranslation("payment", language).toUpperCase()}
+                </Text>
+                <Text style={styles.transDetails}>
+                  {getTranslation("shoppingMallPurchase", language)}
+                </Text>
               </View>
               <Text style={[styles.amount, styles.expense]}>-45.50</Text>
             </View>
@@ -169,7 +216,9 @@ const AccountDetailsScreen = ({
             <View style={styles.transactionItem}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.transDate}>01 Nov</Text>
-                <Text style={styles.transName}>Supermarket Purchase</Text>
+                <Text style={styles.transName}>
+                  {getTranslation("supermarketPurchase", language)}
+                </Text>
               </View>
               <Text style={[styles.amount, styles.expense]}>-85.50</Text>
             </View>
@@ -181,7 +230,9 @@ const AccountDetailsScreen = ({
             <View style={styles.transactionItem}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.transDate}>30 Oct</Text>
-                <Text style={styles.transName}>Salary Deposit</Text>
+                <Text style={styles.transName}>
+                  {getTranslation("salaryDeposit", language)}
+                </Text>
               </View>
               <Text style={[styles.amount, styles.deposit]}>+4,500.00</Text>
             </View>
@@ -192,8 +243,8 @@ const AccountDetailsScreen = ({
         <TouchableOpacity style={styles.toggleButton} onPress={toggleAdvanced}>
           <Text style={styles.toggleButtonText}>
             {showAdvanced
-              ? "Hide Full History and Management"
-              : "View Full History and Management"}
+              ? getTranslation("hideFullHistory", language)
+              : getTranslation("viewFullHistory", language)}
           </Text>
           <Icon
             name={showAdvanced ? "chevron-up" : "chevron-down"}
@@ -206,20 +257,26 @@ const AccountDetailsScreen = ({
         {/* Advanced Features (Conditional Rendering) */}
         {showAdvanced && (
           <View style={styles.advancedFeatures}>
-            <Text style={styles.advancedTitle}>Account Management</Text>
+            <Text style={styles.advancedTitle}>
+              {getTranslation("accountManagement", language)}
+            </Text>
 
             <View style={styles.infoBox}>
-              <Text style={styles.infoLabel}>Account Opening Date</Text>
+              <Text style={styles.infoLabel}>
+                {getTranslation("accountOpeningDate", language)}
+              </Text>
               <Text style={styles.infoValue}>15 March 2018</Text>
             </View>
 
             <TouchableOpacity style={styles.actionButton}>
-              <Text style={styles.actionButtonText}>Download e-Statements</Text>
+              <Text style={styles.actionButtonText}>
+                {getTranslation("downloadStatements", language)}
+              </Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.actionButton}>
               <Text style={styles.actionButtonText}>
-                Change Account Nickname
+                {getTranslation("changeNickname", language)}
               </Text>
             </TouchableOpacity>
 
@@ -237,21 +294,23 @@ const AccountDetailsScreen = ({
           onPress={() => router.push("/homepage")}
         >
           <Icon name="home" size={22} color="#888" />
-          <Text style={styles.navText}>Home</Text>
+          <Text style={styles.navText}>{getTranslation("home", language)}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.navItem}
           onPress={() => router.push("/transferscreen")}
         >
           <Icon name="exchange-alt" size={22} color="#888" />
-          <Text style={styles.navText}>Pay & Transfer</Text>
+          <Text style={styles.navText}>
+            {getTranslation("payAndTransfer", language)}
+          </Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.navItem}
           onPress={() => router.push("/more")}
         >
           <Icon name="th-large" size={22} color="#888" />
-          <Text style={styles.navText}>More</Text>
+          <Text style={styles.navText}>{getTranslation("more", language)}</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>

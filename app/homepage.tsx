@@ -1,5 +1,6 @@
 import { FontAwesome5, FontAwesome6 } from "@expo/vector-icons";
 // import { ExpoSpeechRecognitionModule, useSpeechRecognitionEvent } from "@jamsch/expo-speech-recognition";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { Link, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
@@ -15,6 +16,7 @@ import {
   View,
 } from "react-native";
 import { supabase } from "../lib/supabase";
+import { getTranslation, getTranslationWithParams } from "../lib/translations";
 
 interface Account {
   id: string;
@@ -37,6 +39,9 @@ export default function HomePage() {
   const [userName, setUserName] = useState<string>("");
   const [loading, setLoading] = useState(true);
 
+  // Language state
+  const [language, setLanguage] = useState("en");
+
   // New state for account management
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
@@ -51,8 +56,21 @@ export default function HomePage() {
   const [isCobiListening, setIsCobiListening] = useState(false);
   const [spokenText, setSpokenText] = useState("");
 
+  // Load language preference
+  const loadLanguage = async () => {
+    try {
+      const savedLanguage = await AsyncStorage.getItem("selectedLanguage");
+      if (savedLanguage) {
+        setLanguage(savedLanguage);
+      }
+    } catch (error) {
+      console.error("Error loading language:", error);
+    }
+  };
+
   useEffect(() => {
     fetchUserData();
+    loadLanguage();
   }, []);
 
   // Cobi Event Listeners - Disabled
@@ -84,8 +102,8 @@ export default function HomePage() {
     }
     if (!permission.granted) {
       Alert.alert(
-        "Permission",
-        "Camera permission is required to scan QR codes.",
+        getTranslation("permission", language),
+        getTranslation("cameraPermissionRequired", language),
       );
       requestPermission();
       return;
@@ -115,12 +133,15 @@ export default function HomePage() {
         // Payment Request
         if (parsed.accountNo && parsed.amount) {
           Alert.alert(
-            "Payment Request",
-            `Do you want to pay SGD ${parsed.amount} to ${parsed.accountNo}?`,
+            getTranslation("paymentRequest", language),
+            getTranslationWithParams("paymentRequestMessage", language, {
+              amount: parsed.amount,
+              accountNo: parsed.accountNo,
+            }),
             [
-              { text: "Cancel", style: "cancel" },
+              { text: getTranslation("cancel", language), style: "cancel" },
               {
-                text: "Pay",
+                text: getTranslation("pay", language),
                 onPress: () => {
                   router.push({
                     pathname: "/twotappay",
@@ -138,12 +159,14 @@ export default function HomePage() {
       } else if (parsed.accountNo) {
         // Link Request (Standard Profile QR)
         Alert.alert(
-          "Link Account",
-          `Found account: ${parsed.accountNo}. Do you want to link?`,
+          getTranslation("linkAccount", language),
+          getTranslationWithParams("linkAccountMessage", language, {
+            accountNo: parsed.accountNo,
+          }),
           [
-            { text: "Cancel", style: "cancel" },
+            { text: getTranslation("cancel", language), style: "cancel" },
             {
-              text: "Link",
+              text: getTranslation("link", language),
               onPress: () => {
                 router.push({
                   pathname: "/linktoaccount",
@@ -157,12 +180,18 @@ export default function HomePage() {
           ],
         );
       } else {
-        Alert.alert("Invalid QR", "This QR code is not recognized.");
+        Alert.alert(
+          getTranslation("invalidQR", language),
+          getTranslation("qrNotRecognized", language),
+        );
       }
     } catch (e) {
       console.error("Error parsing QR code:", e);
       setShowScanner(false);
-      Alert.alert("Error", "Could not parse QR code.");
+      Alert.alert(
+        getTranslation("error", language),
+        getTranslation("couldNotParseQR", language),
+      );
     }
   };
 
@@ -282,9 +311,9 @@ export default function HomePage() {
       } else {
         setUserName(user.email?.split("@")[0] || "User");
         Alert.alert(
-          "No Accounts Found",
-          "No bank accounts are linked to this email. Please contact support or create an account.",
-          [{ text: "OK" }],
+          getTranslation("noAccountsFoundTitle", language),
+          getTranslation("noAccountsFoundMessage", language),
+          [{ text: getTranslation("ok", language) }],
         );
       }
 
@@ -293,7 +322,10 @@ export default function HomePage() {
       console.error("Error in fetchUserData:", error);
       setUserName("User");
       setLoading(false);
-      Alert.alert("Error", "Failed to load account data. Please try again.");
+      Alert.alert(
+        getTranslation("error", language),
+        getTranslation("failedToLoadAccounts", language),
+      );
     }
   };
 
@@ -304,32 +336,44 @@ export default function HomePage() {
   };
 
   const handleLogout = async () => {
-    Alert.alert("Logout", "Are you sure you want to logout?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Logout",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            const { error } = await supabase.auth.signOut();
-            if (error) {
-              Alert.alert("Error", "Failed to logout: " + error.message);
-            } else {
-              router.replace("/landing");
+    Alert.alert(
+      getTranslation("logout", language),
+      getTranslation("logoutConfirm", language),
+      [
+        { text: getTranslation("cancel", language), style: "cancel" },
+        {
+          text: getTranslation("logout", language),
+          style: "destructive",
+          onPress: async () => {
+            try {
+              const { error } = await supabase.auth.signOut();
+              if (error) {
+                Alert.alert(
+                  getTranslation("error", language),
+                  getTranslation("failedLogout", language) +
+                    ": " +
+                    error.message,
+                );
+              } else {
+                router.replace("/landing");
+              }
+            } catch {
+              Alert.alert(
+                getTranslation("error", language),
+                getTranslation("unexpectedError", language),
+              );
             }
-          } catch {
-            Alert.alert("Error", "An unexpected error occurred");
-          }
+          },
         },
-      },
-    ]);
+      ],
+    );
   };
 
   // Cobi Handlers
   const handleCobiPress = async () => {
     Alert.alert(
-      "Feature Unavailable",
-      "Voice commands are currently disabled in this environment.",
+      getTranslation("featureUnavailable", language),
+      getTranslation("voiceCommandsDisabled", language),
     );
     /*
     if (isCobiListening) {
@@ -395,13 +439,15 @@ export default function HomePage() {
                 <FontAwesome6 name="bell" size={24} color="black" />
               </Link>
               <TouchableOpacity onPress={handleLogout}>
-                <Text className="text-blue-700 font-bold">Logout</Text>
+                <Text className="text-blue-700 font-bold">
+                  {getTranslation("logout", language)}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
           <View className="mb-8" style={{ marginTop: 100 }}>
             <Text className="text-3xl font-bold text-gray-800 mb-3">
-              Welcome, {userName}
+              {getTranslation("welcome", language)}, {userName}
             </Text>
             {accounts.length > 1 && (
               <TouchableOpacity
@@ -410,7 +456,8 @@ export default function HomePage() {
               >
                 <FontAwesome6 name="user-group" size={14} color="#da291c" />
                 <Text className="ml-2 text-xs font-semibold text-gray-800">
-                  Switch Account ({accounts.length})
+                  {getTranslation("switchAccount", language)} ({accounts.length}
+                  )
                 </Text>
               </TouchableOpacity>
             )}
@@ -426,7 +473,9 @@ export default function HomePage() {
             >
               <FontAwesome6 name="comment-dollar" size={20} color="black" />
             </TouchableOpacity>
-            <Text className="text-xs text-gray-600">PayNow</Text>
+            <Text className="text-xs text-gray-600">
+              {getTranslation("payNow", language)}
+            </Text>
           </View>
 
           <View className="items-center">
@@ -436,7 +485,9 @@ export default function HomePage() {
             >
               <FontAwesome6 name="qrcode" size={20} color="black" />
             </TouchableOpacity>
-            <Text className="text-xs text-gray-600">Scan</Text>
+            <Text className="text-xs text-gray-600">
+              {getTranslation("scan", language)}
+            </Text>
           </View>
 
           <View className="h-full w-px bg-gray-300" />
@@ -445,7 +496,9 @@ export default function HomePage() {
             <TouchableOpacity className="bg-orange-100 p-3 rounded-full mb-1">
               <FontAwesome6 name="gear" size={20} color="black" />
             </TouchableOpacity>
-            <Text className="text-xs text-gray-600">Customise</Text>
+            <Text className="text-xs text-gray-600">
+              {getTranslation("customise", language)}
+            </Text>
           </View>
         </View>
 
@@ -476,7 +529,7 @@ export default function HomePage() {
                 <Text
                   className={`capitalize ${activeTab === tab ? "text-white font-bold" : "text-gray-600"}`}
                 >
-                  {tab}
+                  {getTranslation(tab, language)}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -541,7 +594,9 @@ export default function HomePage() {
             </View>
 
             <View className="flex-row justify-between items-end mb-3">
-              <Text className="text-gray-700 text-base">Available balance</Text>
+              <Text className="text-gray-700 text-base">
+                {getTranslation("availableBalance", language)}
+              </Text>
               <Text
                 className={`text-xl font-bold ${isHidden ? "bg-black-200 text-transparent" : "text-black-800"}`}
               >
@@ -553,8 +608,8 @@ export default function HomePage() {
             <View className="border-t border-gray-200 pt-3 flex-row justify-between items-center">
               <Text className="text-gray-700 text-base">
                 {selectedAccount?.accountType?.toLowerCase().includes("credit")
-                  ? "Credit card no."
-                  : "Debit card no."}
+                  ? getTranslation("creditCardNo", language)
+                  : getTranslation("debitCardNo", language)}
               </Text>
               <Text
                 className={`text-base font-medium text-black-600 ${isHidden ? "bg-black-200 text-transparent" : ""}`}
@@ -579,7 +634,7 @@ export default function HomePage() {
         ) : (
           <View className="bg-[#f6ecec] mx-4 p-5 rounded-xl border border-gray-200">
             <Text className="text-center text-gray-500">
-              No accounts found. Please contact support.
+              {getTranslation("noAccountsFound", language)}
             </Text>
           </View>
         )}
@@ -588,10 +643,10 @@ export default function HomePage() {
         {selectedAccount && (
           <View className="mx-4 mt-4 mb-32">
             <Text className="text-xl font-bold text-gray-800 mb-3 mt-3">
-              Recent Transactions
+              {getTranslation("recentTransactions", language)}
             </Text>
             <Text className="text-sm text-gray-500 mb-3">
-              Up to 50 (last 7 days only)
+              {getTranslation("upTo50Last7Days", language)}
             </Text>
 
             {/* Transaction 1 */}
@@ -600,9 +655,11 @@ export default function HomePage() {
                 <View className="flex-1">
                   <Text className="text-xs text-gray-500 mb-1">28 Jan</Text>
                   <Text className="text-sm font-bold text-gray-800 mb-1">
-                    TRANSFER
+                    {getTranslation("transfer", language).toUpperCase()}
                   </Text>
-                  <Text className="text-sm text-gray-600">From John Doe</Text>
+                  <Text className="text-sm text-gray-600">
+                    {getTranslation("from", language)} John Doe
+                  </Text>
                 </View>
                 <Text className="text-base font-semibold text-green-600">
                   +150.00
@@ -616,10 +673,10 @@ export default function HomePage() {
                 <View className="flex-1">
                   <Text className="text-xs text-gray-500 mb-1">27 Jan</Text>
                   <Text className="text-sm font-bold text-gray-800 mb-1">
-                    PAYMENT
+                    {getTranslation("payment", language).toUpperCase()}
                   </Text>
                   <Text className="text-sm text-gray-600">
-                    Shopping Mall Purchase
+                    {getTranslation("shoppingMallPurchase", language)}
                   </Text>
                 </View>
                 <Text className="text-base font-semibold text-gray-800">
@@ -641,7 +698,9 @@ export default function HomePage() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select Account</Text>
+              <Text style={styles.modalTitle}>
+                {getTranslation("selectAccount", language)}
+              </Text>
               <TouchableOpacity onPress={() => setShowAccountModal(false)}>
                 <Text style={styles.modalClose}>✕</Text>
               </TouchableOpacity>
@@ -760,7 +819,7 @@ export default function HomePage() {
         >
           <FontAwesome5 name="home" size={22} color="#da291c" />
           <Text style={[styles.navItemText, styles.navItemTextActive]}>
-            Home
+            {getTranslation("home", language)}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -768,14 +827,18 @@ export default function HomePage() {
           onPress={() => router.push("/transferscreen")}
         >
           <FontAwesome5 name="exchange-alt" size={22} color="#888" />
-          <Text style={styles.navItemText}>Pay & Transfer</Text>
+          <Text style={styles.navItemText}>
+            {getTranslation("payAndTransfer", language)}
+          </Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.navItem}
           onPress={() => router.push("/more")}
         >
           <FontAwesome5 name="th-large" size={22} color="#888" />
-          <Text style={styles.navItemText}>More</Text>
+          <Text style={styles.navItemText}>
+            {getTranslation("more", language)}
+          </Text>
         </TouchableOpacity>
       </View>
 
