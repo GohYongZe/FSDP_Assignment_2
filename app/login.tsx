@@ -3,18 +3,18 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Image,
-  ImageBackground,
-  KeyboardAvoidingView,
-  Platform,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Image,
+    ImageBackground,
+    KeyboardAvoidingView,
+    Platform,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { supabase } from "../lib/supabase";
 
@@ -421,26 +421,6 @@ const Login = () => {
                         />
                       </TouchableOpacity>
                     </View>
-                  </View>
-
-                  {/* Remember Me */}
-                  <View style={styles.checkboxContainer}>
-                    <TouchableOpacity
-                      style={[
-                        styles.checkbox,
-                        rememberMe && styles.checkboxChecked,
-                      ]}
-                      onPress={() => setRememberMe(!rememberMe)}
-                    >
-                      {rememberMe && (
-                        <MaterialCommunityIcons
-                          name="check"
-                          size={16}
-                          color="#fff"
-                        />
-                      )}
-                    </TouchableOpacity>
-                    <Text style={styles.checkboxLabel}>{t.rememberMe}</Text>
                   </View>
 
                   {/* Login Button */}

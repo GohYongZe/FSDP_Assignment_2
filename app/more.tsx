@@ -757,7 +757,7 @@ const More = ({ navigation }: MoreProps) => {
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
         {/* Header */}
-        <View style={styles.header}>
+        <View style={styles.topBar}>
           <Text style={styles.headerTitle}>{t.more}</Text>
           <TouchableOpacity onPress={handleLogout}>
             <Text style={styles.logoutLink}>{t.logout}</Text>
@@ -897,17 +897,18 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#f0f2f5",
   },
-  header: {
+  topBar: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     padding: 20,
+    paddingTop: 40,
     backgroundColor: "#da291c",
     borderBottomWidth: 1,
     borderBottomColor: "#eee",
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: "700",
     color: "#fff",
   },
@@ -1016,7 +1017,8 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: "#eee",
     paddingVertical: 8,
-    paddingBottom: 10,
+    paddingBottom: 35,
+    paddingTop: 12,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.05,

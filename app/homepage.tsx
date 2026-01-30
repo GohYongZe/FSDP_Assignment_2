@@ -30,7 +30,7 @@ export default function HomePage() {
   const router = useRouter();
 
   // State from homepage.tsx
-  const [isHidden, setIsHidden] = useState(true);
+  const [isHidden, setIsHidden] = useState(false);
   const [activeTab, setActiveTab] = useState("accounts");
 
   // State from homepage.tsx
@@ -111,52 +111,58 @@ export default function HomePage() {
       console.log("Scanned QR:", parsed);
       setShowScanner(false); // Close now
 
-        if (parsed.type === 'request') {
-            // Payment Request
-            if (parsed.accountNo && parsed.amount) {
-                Alert.alert(
-                    "Payment Request", 
-                    `Do you want to pay SGD ${parsed.amount} to ${parsed.accountNo}?`,
-                    [
-                        { text: "Cancel", style: "cancel" },
-                        { text: "Pay", onPress: () => {
-                            router.push({
-                                pathname: "/twotappay",
-                                params: {
-                                    accountNo: parsed.accountNo,
-                                    nickName: parsed.name || 'Quick Pay',
-                                    amount: parsed.amount // Pass amount to pre-select
-                                }
-                            });
-                        }}
-                    ]
-                );
-            }
-        } else if (parsed.accountNo) {
-            // Link Request (Standard Profile QR)
-            Alert.alert(
-                "Link Account", 
-                `Found account: ${parsed.accountNo}. Do you want to link?`,
-                [
-                    { text: "Cancel", style: "cancel" },
-                    { text: "Link", onPress: () => {
-                        router.push({
-                            pathname: "/linktoaccount",
-                            params: {
-                                accountNo: parsed.accountNo,
-                                name: parsed.name || ''
-                            }
-                        });
-                    }}
-                ]
-            );
-        } else {
-            Alert.alert("Invalid QR", "This QR code is not recognized.");
+      if (parsed.type === "request") {
+        // Payment Request
+        if (parsed.accountNo && parsed.amount) {
+          Alert.alert(
+            "Payment Request",
+            `Do you want to pay SGD ${parsed.amount} to ${parsed.accountNo}?`,
+            [
+              { text: "Cancel", style: "cancel" },
+              {
+                text: "Pay",
+                onPress: () => {
+                  router.push({
+                    pathname: "/twotappay",
+                    params: {
+                      accountNo: parsed.accountNo,
+                      nickName: parsed.name || "Quick Pay",
+                      amount: parsed.amount, // Pass amount to pre-select
+                    },
+                  });
+                },
+              },
+            ],
+          );
         }
+      } else if (parsed.accountNo) {
+        // Link Request (Standard Profile QR)
+        Alert.alert(
+          "Link Account",
+          `Found account: ${parsed.accountNo}. Do you want to link?`,
+          [
+            { text: "Cancel", style: "cancel" },
+            {
+              text: "Link",
+              onPress: () => {
+                router.push({
+                  pathname: "/linktoaccount",
+                  params: {
+                    accountNo: parsed.accountNo,
+                    name: parsed.name || "",
+                  },
+                });
+              },
+            },
+          ],
+        );
+      } else {
+        Alert.alert("Invalid QR", "This QR code is not recognized.");
+      }
     } catch (e) {
-        console.error("Error parsing QR code:", e);
-        setShowScanner(false);
-        Alert.alert("Error", "Could not parse QR code.");
+      console.error("Error parsing QR code:", e);
+      setShowScanner(false);
+      Alert.alert("Error", "Could not parse QR code.");
     }
   };
 
@@ -278,7 +284,7 @@ export default function HomePage() {
         Alert.alert(
           "No Accounts Found",
           "No bank accounts are linked to this email. Please contact support or create an account.",
-          [{ text: "OK" }]
+          [{ text: "OK" }],
         );
       }
 
@@ -321,7 +327,10 @@ export default function HomePage() {
 
   // Cobi Handlers
   const handleCobiPress = async () => {
-    Alert.alert("Feature Unavailable", "Voice commands are currently disabled in this environment.");
+    Alert.alert(
+      "Feature Unavailable",
+      "Voice commands are currently disabled in this environment.",
+    );
     /*
     if (isCobiListening) {
       ExpoSpeechRecognitionModule.stop();
@@ -376,10 +385,8 @@ export default function HomePage() {
       <ScrollView className="flex-1 bg-gray-100">
         {/* Header Section */}
         <ImageBackground
-          source={{
-            uri: "https://images.unsplash.com/photo-1565967511849-76a60a16170",
-          }}
-          className="h-56 p-5 justify-between"
+          source={require("../assets/images/homepage_bg.png")}
+          className="h-100 p-5 justify-between"
         >
           <View className="flex-row justify-between items-center mt-8">
             <FontAwesome6 name="expand" size={24} color="black" />
@@ -392,8 +399,8 @@ export default function HomePage() {
               </TouchableOpacity>
             </View>
           </View>
-          <View className="mb-8">
-            <Text className="text-3xl font-bold text-gray-800">
+          <View className="mb-8" style={{ marginTop: 100 }}>
+            <Text className="text-3xl font-bold text-gray-800 mb-3">
               Welcome, {userName}
             </Text>
             {accounts.length > 1 && (
@@ -412,14 +419,10 @@ export default function HomePage() {
 
         {/* Quick Actions Card */}
         <View className="bg-white mx-4 -mt-12 p-5 rounded-xl shadow-lg flex-row justify-around relative">
-          <TouchableOpacity className="absolute top-2 right-2">
-            <FontAwesome6 name="gear" size={16} color="gray" />
-          </TouchableOpacity>
-
           <View className="items-center">
             <TouchableOpacity
               className="bg-gray-100 p-3 rounded-full mb-1"
-              onPress={() => router.push("/TransferScreen")}
+              onPress={() => router.push("/transferscreen")}
             >
               <FontAwesome6 name="comment-dollar" size={20} color="black" />
             </TouchableOpacity>
@@ -435,6 +438,15 @@ export default function HomePage() {
             </TouchableOpacity>
             <Text className="text-xs text-gray-600">Scan</Text>
           </View>
+
+          <View className="h-full w-px bg-gray-300" />
+
+          <View className="items-center">
+            <TouchableOpacity className="bg-orange-100 p-3 rounded-full mb-1">
+              <FontAwesome6 name="gear" size={20} color="black" />
+            </TouchableOpacity>
+            <Text className="text-xs text-gray-600">Customise</Text>
+          </View>
         </View>
 
         {/* Account Tabs */}
@@ -444,7 +456,7 @@ export default function HomePage() {
             className="mr-3"
           >
             <FontAwesome6
-              name={isHidden ? "eye" : "eye-slash"}
+              name={isHidden ? "eye-slash" : "eye"}
               size={20}
               color={isHidden ? "#666" : "#da291c"}
             />
@@ -474,49 +486,147 @@ export default function HomePage() {
         {/* Account Details Card */}
         {selectedAccount ? (
           <TouchableOpacity
-            className="bg-gray-50 mx-4 p-5 rounded-xl border border-gray-200"
-            onPress={() => router.push("/accountdetails")}
+            className="bg-[#f6ecec] mx-4 p-5 rounded-xl border border-gray-200"
+            onPress={() =>
+              router.push({
+                pathname: "/accountdetails",
+                params: {
+                  accountType:
+                    selectedAccount?.accountType ||
+                    `OCBC ${selectedAccount?.type === "foreign" ? "Foreign" : "FRANK"} Account`,
+                  balance: selectedAccount?.balance?.toFixed(2) || "0.00",
+                  accountNumber: selectedAccount?.accountNumber || "",
+                },
+              })
+            }
           >
             <View className="flex-row justify-between items-center mb-4">
               <View className="flex-row items-center">
                 <View className="bg-orange-300 w-10 h-10 rounded-full items-center justify-center mr-3">
                   <Text className="text-white font-bold text-xs">
-                    {selectedAccount?.type === "foreign" ? "FOR" : "FRA"}
+                    {(() => {
+                      const accountType =
+                        selectedAccount?.accountType ||
+                        (selectedAccount?.type === "foreign"
+                          ? "Foreign"
+                          : "Frank");
+                      const firstWord = accountType.split(" ")[0];
+                      return firstWord.substring(0, 3).toUpperCase();
+                    })()}
                   </Text>
                 </View>
                 <View>
-                  <Text className="font-bold text-gray-800">
+                  <Text className="text-xl font-bold text-gray-800">
                     {selectedAccount?.accountType ||
                       `OCBC ${selectedAccount?.type === "foreign" ? "Foreign" : "FRANK"} Account`}
                   </Text>
                   <Text
-                    className={`text-xs text-gray-500 ${isHidden ? "bg-gray-200 text-transparent" : ""}`}
+                    className={`text-base font-medium text-black-600 mt-1 ${isHidden ? "bg-black-200 text-transparent" : ""}`}
                   >
                     {isHidden
-                      ? "••••••••"
-                      : selectedAccount?.accountNumber || "123-45678-9"}
+                      ? "•••••••••••"
+                      : (() => {
+                          const accNo =
+                            selectedAccount?.accountNumber || "123456789";
+                          // Format as XXX-XXXXX-XXX
+                          if (accNo.length >= 9) {
+                            return `${accNo.slice(0, 3)}-${accNo.slice(3, -3)}-${accNo.slice(-3)}`;
+                          }
+                          return accNo;
+                        })()}
                   </Text>
                 </View>
               </View>
               <FontAwesome6 name="chevron-right" size={16} color="gray" />
             </View>
 
-            <View className="border-t border-gray-200 pt-3 flex-row justify-between items-end">
-              <Text className="text-gray-400 text-sm">Available balance</Text>
+            <View className="flex-row justify-between items-end mb-3">
+              <Text className="text-gray-700 text-base">Available balance</Text>
               <Text
-                className={`text-lg font-bold ${isHidden ? "bg-gray-200 text-transparent" : "text-gray-800"}`}
+                className={`text-xl font-bold ${isHidden ? "bg-black-200 text-transparent" : "text-black-800"}`}
               >
                 {isHidden
                   ? "••••••"
-                  : `S$ ${selectedAccount?.balance?.toFixed(2) || "0.00"}`}
+                  : `${selectedAccount?.balance?.toFixed(2) || "0.00"} SGD`}
+              </Text>
+            </View>
+            <View className="border-t border-gray-200 pt-3 flex-row justify-between items-center">
+              <Text className="text-gray-700 text-base">
+                {selectedAccount?.accountType?.toLowerCase().includes("credit")
+                  ? "Credit card no."
+                  : "Debit card no."}
+              </Text>
+              <Text
+                className={`text-base font-medium text-black-600 ${isHidden ? "bg-black-200 text-transparent" : ""}`}
+              >
+                {isHidden
+                  ? "••••••••••••"
+                  : (() => {
+                      const accNo =
+                        selectedAccount?.accountNumber || "123456789";
+                      // Format as XXXX-XXXX-XXXX for card display
+                      if (accNo.length >= 9) {
+                        // Group digits in sets of 4
+                        const formatted =
+                          accNo.match(/.{1,4}/g)?.join("-") || accNo;
+                        return formatted;
+                      }
+                      return accNo;
+                    })()}
               </Text>
             </View>
           </TouchableOpacity>
         ) : (
-          <View className="bg-gray-50 mx-4 p-5 rounded-xl border border-gray-200">
+          <View className="bg-[#f6ecec] mx-4 p-5 rounded-xl border border-gray-200">
             <Text className="text-center text-gray-500">
               No accounts found. Please contact support.
             </Text>
+          </View>
+        )}
+
+        {/* Recent Transactions */}
+        {selectedAccount && (
+          <View className="mx-4 mt-4 mb-32">
+            <Text className="text-xl font-bold text-gray-800 mb-3 mt-3">
+              Recent Transactions
+            </Text>
+            <Text className="text-sm text-gray-500 mb-3">
+              Up to 50 (last 7 days only)
+            </Text>
+
+            {/* Transaction 1 */}
+            <View className="bg-white p-4 rounded-lg border border-gray-200 mb-2">
+              <View className="flex-row justify-between items-center">
+                <View className="flex-1">
+                  <Text className="text-xs text-gray-500 mb-1">28 Jan</Text>
+                  <Text className="text-sm font-bold text-gray-800 mb-1">
+                    TRANSFER
+                  </Text>
+                  <Text className="text-sm text-gray-600">From John Doe</Text>
+                </View>
+                <Text className="text-base font-semibold text-green-600">
+                  +150.00
+                </Text>
+              </View>
+            </View>
+
+            {/* Transaction 2 */}
+            <View className="bg-white p-4 rounded-lg border border-gray-200">
+              <View className="flex-row justify-between items-center">
+                <View className="flex-1">
+                  <Text className="text-xs text-gray-500 mb-1">27 Jan</Text>
+                  <Text className="text-sm font-bold text-gray-800 mb-1">
+                    PAYMENT
+                  </Text>
+                  <Text className="text-sm text-gray-600">
+                    Shopping Mall Purchase
+                  </Text>
+                </View>
+                <Text className="text-base font-semibold text-gray-800">
+                  -45.50
+                </Text>
+              </View>
+            </View>
           </View>
         )}
       </ScrollView>
@@ -550,7 +660,13 @@ export default function HomePage() {
                   >
                     <View style={styles.accountIcon}>
                       <Text style={styles.accountIconText}>
-                        {account.type === "foreign" ? "FOR" : "FRA"}
+                        {(() => {
+                          const accountType =
+                            account.accountType ||
+                            (account.type === "foreign" ? "Foreign" : "Frank");
+                          const firstWord = accountType.split(" ")[0];
+                          return firstWord.substring(0, 3).toUpperCase();
+                        })()}
                       </Text>
                     </View>
                     <View style={styles.accountInfo}>
@@ -632,9 +748,7 @@ export default function HomePage() {
       {isCobiListening && (
         <View style={styles.cobiPopup}>
           <Text style={styles.cobiTitle}>Cobi Assistant</Text>
-          <Text style={styles.cobiText}>
-            {spokenText || "Listening..."}
-          </Text>
+          <Text style={styles.cobiText}>{spokenText || "Listening..."}</Text>
         </View>
       )}
 
@@ -651,7 +765,7 @@ export default function HomePage() {
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.navItem}
-          onPress={() => router.push("/TransferScreen")}
+          onPress={() => router.push("/transferscreen")}
         >
           <FontAwesome5 name="exchange-alt" size={22} color="#888" />
           <Text style={styles.navItemText}>Pay & Transfer</Text>
@@ -702,7 +816,8 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: "#eee",
     paddingVertical: 8,
-    paddingBottom: 10,
+    paddingBottom: 35,
+    paddingTop: 12,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.05,
@@ -800,7 +915,7 @@ const styles = StyleSheet.create({
   },
   cobiButton: {
     position: "absolute",
-    bottom: 96,
+    bottom: 110,
     right: 24,
     width: 64,
     height: 64,

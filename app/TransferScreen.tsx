@@ -33,13 +33,13 @@ const TransferScreen = ({ navigation }: { navigation: any }) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" />
+      <StatusBar barStyle="light-content" />
 
       {/* Top Bar */}
       <View style={styles.topBar}>
         <Text style={styles.headerText}>Pay & Transfer</Text>
         <TouchableOpacity>
-          <Icon name="search" size={18} color="#333" />
+          <Icon name="search" size={18} color="#fff" />
         </TouchableOpacity>
       </View>
 
@@ -106,17 +106,15 @@ const TransferScreen = ({ navigation }: { navigation: any }) => {
           style={styles.navItem}
           onPress={() => router.push("/homepage")}
         >
-          <Icon name="home" size={20} color="#888" />
+          <Icon name="home" size={22} color="#888" />
           <Text style={styles.navText}>Home</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={styles.navItem}
+          style={[styles.navItem, styles.navItemActive]}
           onPress={() => router.push("/transferscreen")}
         >
-          <Icon name="exchange-alt" size={20} color="#da291c" />
-          <Text
-            style={[styles.navText, { color: "#da291c", fontWeight: "600" }]}
-          >
+          <Icon name="exchange-alt" size={22} color="#da291c" />
+          <Text style={[styles.navText, styles.navTextActive]}>
             Pay & Transfer
           </Text>
         </TouchableOpacity>
@@ -124,7 +122,7 @@ const TransferScreen = ({ navigation }: { navigation: any }) => {
           style={styles.navItem}
           onPress={() => router.push("/more")}
         >
-          <Icon name="th-large" size={20} color="#888" />
+          <Icon name="th-large" size={22} color="#888" />
           <Text style={styles.navText}>More</Text>
         </TouchableOpacity>
       </View>
@@ -139,11 +137,12 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     padding: 20,
-    backgroundColor: "#fff",
+    paddingTop: 40,
+    backgroundColor: "#da291c",
     borderBottomWidth: 1,
     borderBottomColor: "#eee",
   },
-  headerText: { fontSize: 22, fontWeight: "700", color: "#333" },
+  headerText: { fontSize: 20, fontWeight: "700", color: "#fff" },
   scrollContent: { paddingBottom: 20 },
   mainActionsCard: {
     backgroundColor: "#fff",
@@ -205,9 +204,20 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: "#eee",
     paddingVertical: 10,
+    paddingBottom: 35,
+    paddingTop: 12,
   },
-  navItem: { flex: 1, alignItems: "center" },
-  navText: { fontSize: 11, marginTop: 4, fontWeight: "500", color: "#888" },
+  navItem: { flex: 1, alignItems: "center", paddingVertical: 6 },
+  navText: {
+    fontSize: 12,
+    marginTop: 4,
+    fontWeight: "500",
+    color: "#888",
+  },
+  navItemActive: {},
+  navTextActive: {
+    color: "#da291c",
+  },
 });
 
 export default TransferScreen;
