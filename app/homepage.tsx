@@ -1,9 +1,10 @@
 import { FontAwesome5, FontAwesome6 } from "@expo/vector-icons";
-// import { ExpoSpeechRecognitionModule, useSpeechRecognitionEvent } from "@jamsch/expo-speech-recognition";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Audio } from "expo-av";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { Link, useNavigation, useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import * as Speech from "expo-speech";
+import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -37,9 +38,22 @@ interface Transaction {
   created_at: string;
 }
 
+type CobiAction =
+  | { type: "navigate"; pathname: string; params?: Record<string, any> }
+  | { type: "none" };
+
+type CobiResult = {
+  reply: string;
+  action?: CobiAction;
+};
+
+type CobiMsg = { role: "user" | "assistant"; content: string };
+
+const COBI_HISTORY_LIMIT = 10;
+
 export default function HomePage() {
-  const router = useRouter(); // push/replace logic
-  const navigation = useNavigation(); // tab switching
+  const router = useRouter();
+  const navigation = useNavigation();
 
   // ui state
   const [isHidden, setIsHidden] = useState(false);
@@ -68,14 +82,18 @@ export default function HomePage() {
   // cobi states
   const [isCobiListening, setIsCobiListening] = useState(false);
   const [spokenText, setSpokenText] = useState("");
+  const [cobiReply, setCobiReply] = useState("");
+  const [cobiBusy, setCobiBusy] = useState(false);
+  const [cobiHistory, setCobiHistory] = useState<CobiMsg[]>([]);
+
+  const recordingRef = useRef<Audio.Recording | null>(null);
+  const startedAtRef = useRef<number>(0);
 
   // load language preference
   const loadLanguage = async () => {
     try {
       const savedLanguage = await AsyncStorage.getItem("selectedLanguage");
-      if (savedLanguage) {
-        setLanguage(savedLanguage);
-      }
+      if (savedLanguage) setLanguage(savedLanguage);
     } catch (error) {
       console.error("Error loading language:", error);
     }
@@ -88,91 +106,63 @@ export default function HomePage() {
 
   useEffect(() => {
     if (selectedAccount?.accountNumber) {
-        fetchTransactions(selectedAccount.accountNumber);
+      fetchTransactions(selectedAccount.accountNumber);
 
-        // real-time transactions
-        const txChannel = supabase.channel(`home_transactions_${selectedAccount.accountNumber}`)
+      const txChannel = supabase
+        .channel(`home_transactions_${selectedAccount.accountNumber}`)
         .on(
-            'postgres_changes',
-            { 
-                event: 'INSERT', 
-                schema: 'public', 
-                table: 'TransactionsHistory',
-                filter: `receiveraccountNo=eq.${selectedAccount.accountNumber}`
-            },
-            () => { 
-                console.log("Realtime: New incoming tx (Homepage)"); 
-                fetchTransactions(selectedAccount.accountNumber!); 
-                fetchUserData(); // refresh balance
-            }
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "TransactionsHistory",
+            filter: `receiveraccountNo=eq.${selectedAccount.accountNumber}`,
+          },
+          () => {
+            fetchTransactions(selectedAccount.accountNumber!);
+            fetchUserData();
+          },
         )
         .on(
-            'postgres_changes',
-            { 
-                event: 'INSERT', 
-                schema: 'public', 
-                table: 'TransactionsHistory',
-                filter: `senderaccountNo=eq.${selectedAccount.accountNumber}`
-            },
-            () => { 
-                console.log("Realtime: New outgoing tx (Homepage)"); 
-                fetchTransactions(selectedAccount.accountNumber!);
-                fetchUserData(); // refresh balance
-            }
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "TransactionsHistory",
+            filter: `senderaccountNo=eq.${selectedAccount.accountNumber}`,
+          },
+          () => {
+            fetchTransactions(selectedAccount.accountNumber!);
+            fetchUserData();
+          },
         )
         .subscribe();
 
-        return () => {
-            supabase.removeChannel(txChannel);
-        };
+      return () => {
+        supabase.removeChannel(txChannel);
+      };
     }
   }, [selectedAccount]);
 
   const fetchTransactions = async (accountNo: string) => {
     try {
-        const threeDaysAgo = new Date();
-        threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+      const threeDaysAgo = new Date();
+      threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
 
-        const { data, error } = await supabase
-            .from('TransactionsHistory')
-            .select('*')
-            .or(`senderaccountNo.eq.${accountNo},receiveraccountNo.eq.${accountNo}`)
-            .gte('created_at', threeDaysAgo.toISOString()) // last 72 hours
-            .order('created_at', { ascending: false })
-            .limit(10); // recent transactions limit
+      const { data, error } = await supabase
+        .from("TransactionsHistory")
+        .select("*")
+        .or(`senderaccountNo.eq.${accountNo},receiveraccountNo.eq.${accountNo}`)
+        .gte("created_at", threeDaysAgo.toISOString())
+        .order("created_at", { ascending: false })
+        .limit(10);
 
-        if (error) {
-            console.error("Error fetching transactions:", error);
-        } else {
-            console.log("Transactions fetched:", data);
-            setTransactions(data || []);
-        }
+      if (error) console.error("Error fetching transactions:", error);
+      else setTransactions(data || []);
     } catch (err) {
-        console.error("Err:", err);
+      console.error("Err:", err);
     }
   };
-
-  // cobi listeners disabled
-  /*
-  useSpeechRecognitionEvent("result", (event) => {
-    const transcript = event.results[0]?.transcript;
-    if (transcript) {
-      setSpokenText(transcript);
-      if (event.isFinal) {
-        processCommandWithCobi(transcript);
-      }
-    }
-  });
-
-  useSpeechRecognitionEvent("error", (event) => {
-    console.error("Cobi Voice Error:", event.error, event.message);
-    setIsCobiListening(false);
-  });
-
-  useSpeechRecognitionEvent("end", () => {
-    setIsCobiListening(false);
-  });
-  */
 
   const handleStartScan = () => {
     if (!permission) {
@@ -191,24 +181,15 @@ export default function HomePage() {
     setShowScanner(true);
   };
 
-  const handleBarCodeScanned = ({
-    type,
-    data,
-  }: {
-    type: string;
-    data: string;
-  }) => {
-    // prevent multiple scans
+  const handleBarCodeScanned = ({ data }: { type: string; data: string }) => {
     if (scanned) return;
     setScanned(true);
 
     try {
       const parsed = JSON.parse(data);
-      console.log("Scanned QR:", parsed);
-      setShowScanner(false); // close scanner
+      setShowScanner(false);
 
       if (parsed.type === "request") {
-        // payment request
         if (parsed.accountNo && parsed.amount) {
           Alert.alert(
             getTranslation("paymentRequest", language),
@@ -226,16 +207,15 @@ export default function HomePage() {
                     params: {
                       accountNo: parsed.accountNo,
                       nickName: parsed.name || "Quick Pay",
-                      amount: parsed.amount, // pass amount
+                      amount: parsed.amount,
                     },
-                  });
+                  } as any);
                 },
               },
             ],
           );
         }
       } else if (parsed.accountNo) {
-        // link request
         Alert.alert(
           getTranslation("linkAccount", language),
           getTranslationWithParams("linkAccountMessage", language, {
@@ -252,7 +232,7 @@ export default function HomePage() {
                     accountNo: parsed.accountNo,
                     name: parsed.name || "",
                   },
-                });
+                } as any);
               },
             },
           ],
@@ -281,34 +261,27 @@ export default function HomePage() {
       } = await supabase.auth.getUser();
 
       if (authError || !user) {
-        console.error("Auth error:", authError);
         setUserName("Guest");
         setLoading(false);
         return;
       }
 
-      // Fetch all accounts for this email
       const allAccounts: Account[] = [];
 
-      // Fetch from Localaccounts
-      console.log("Attempting to fetch from Localaccounts table...");
       const { data: localData, error: localError } = await supabase
         .from("Localaccounts")
         .select("*")
         .eq("emailAddress", user.email);
 
-      if (localError) {
+      if (localError)
         console.error("Error fetching local accounts:", localError.message);
-      }
 
-      if (localData && localData.length > 0) {
+      if (localData?.length) {
         localData.forEach((acc: any) => {
-          // Check if accountType contains "+"
           const accountTypes = acc.accountType
-            ? acc.accountType.split("+").map((type: string) => type.trim())
+            ? acc.accountType.split("+").map((t: string) => t.trim())
             : [acc.accountType];
 
-          // If account has multiple types (contains +), create separate entries
           if (accountTypes.length > 1) {
             accountTypes.forEach((type: string, index: number) => {
               allAccounts.push({
@@ -322,7 +295,6 @@ export default function HomePage() {
               });
             });
           } else {
-            // Single account type
             allAccounts.push({
               id: acc.accountId.toString(),
               name: acc.name,
@@ -341,18 +313,15 @@ export default function HomePage() {
         .select("*")
         .eq("emailAddress", user.email);
 
-      if (foreignError) {
+      if (foreignError)
         console.error("Error fetching foreign accounts:", foreignError.message);
-      }
 
-      if (foreignData && foreignData.length > 0) {
+      if (foreignData?.length) {
         foreignData.forEach((acc: any) => {
-          // Check if accountType contains "+"
           const accountTypes = acc.accountType
-            ? acc.accountType.split("+").map((type: string) => type.trim())
+            ? acc.accountType.split("+").map((t: string) => t.trim())
             : [acc.accountType];
 
-          // If account has multiple types (contains +), create separate entries
           if (accountTypes.length > 1) {
             accountTypes.forEach((type: string, index: number) => {
               allAccounts.push({
@@ -366,7 +335,6 @@ export default function HomePage() {
               });
             });
           } else {
-            // Single account type
             allAccounts.push({
               id: acc.accountId.toString(),
               name: acc.name,
@@ -382,7 +350,6 @@ export default function HomePage() {
 
       setAccounts(allAccounts);
 
-      // Set the first account as default or show message
       if (allAccounts.length > 0) {
         setSelectedAccount(allAccounts[0]);
         setUserName(allAccounts[0].name);
@@ -423,23 +390,14 @@ export default function HomePage() {
           text: getTranslation("logout", language),
           style: "destructive",
           onPress: async () => {
-            try {
-              const { error } = await supabase.auth.signOut();
-              if (error) {
-                Alert.alert(
-                  getTranslation("error", language),
-                  getTranslation("failedLogout", language) +
-                    ": " +
-                    error.message,
-                );
-              } else {
-                router.replace("/landing");
-              }
-            } catch {
+            const { error } = await supabase.auth.signOut();
+            if (error) {
               Alert.alert(
                 getTranslation("error", language),
-                getTranslation("unexpectedError", language),
+                getTranslation("failedLogout", language) + ": " + error.message,
               );
+            } else {
+              router.replace("/landing");
             }
           },
         },
@@ -447,126 +405,236 @@ export default function HomePage() {
     );
   };
 
-  // Cobi Handlers
-  const handleCobiPress = async () => {
-    Alert.alert(
-      getTranslation("featureUnavailable", language),
-      getTranslation("voiceCommandsDisabled", language),
-    );
-    /*
-    if (isCobiListening) {
-      ExpoSpeechRecognitionModule.stop();
-      setIsCobiListening(false);
-    } else {
-      const result = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
-      // Robust permission check for Android and iOS
-      if (result.status !== "granted" && !result.granted) {
-        Alert.alert(
-          "Permission Denied",
-          "Cobi needs microphone access to help you."
-        );
+  // ------------------------
+  // COBI: Push-to-talk flow
+  // ------------------------
+  const speak = (text: string) => {
+    const t = (text ?? "").toString().trim();
+    if (!t) return;
+    Speech.stop();
+    Speech.speak(t);
+  };
+
+  // IMPORTANT FIX:
+  // Edge function expects `messages`, not `history`.
+  // We'll convert cobiHistory -> messages, then send it.
+  const callCobiAssistant = async (
+    text: string,
+    messages: CobiMsg[],
+  ): Promise<CobiResult> => {
+    const { data, error } = await supabase.functions.invoke("cobi-assistant", {
+      body: {
+        userName,
+        language,
+        selectedAccountNo: selectedAccount?.accountNumber ?? "",
+        messages, // ✅ send as `messages`
+        query: text, // optional; server can ignore
+      },
+    });
+
+    if (error) throw error;
+    return data as CobiResult;
+  };
+
+  const startCobiRecording = async () => {
+    try {
+      if (cobiBusy) return;
+
+      setCobiReply("");
+      setSpokenText("");
+      setIsCobiListening(true);
+
+      const perm = await Audio.requestPermissionsAsync();
+      if (!perm.granted) {
+        Alert.alert("Permission needed", "Please allow microphone access.");
+        setIsCobiListening(false);
         return;
       }
 
-      setSpokenText("");
-      setIsCobiListening(true);
-      // Continuous mode keeps the mic active for longer sentences
-      ExpoSpeechRecognitionModule.start({
-        lang: "en-US",
-        continuous: true,
-        interimResults: true,
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
       });
+
+      const rec = new Audio.Recording();
+      await rec.prepareToRecordAsync(
+        Audio.RecordingOptionsPresets.HIGH_QUALITY,
+      );
+      await rec.startAsync();
+
+      startedAtRef.current = Date.now();
+      recordingRef.current = rec;
+    } catch (e: any) {
+      console.error(e);
+      Alert.alert("Cobi", `Recording error: ${String(e?.message ?? e)}`);
+      setIsCobiListening(false);
     }
-    */
   };
 
-  const processCommandWithCobi = async (text: string) => {
+  const stopCobiRecording = async () => {
+    setIsCobiListening(false);
+
+    const rec = recordingRef.current;
+    if (!rec) return;
+
+    setCobiBusy(true);
+
     try {
-      const { data } = await supabase.functions.invoke("cobi-assistant", {
-        body: { query: text, userName: userName },
-      });
-      if (data?.message) {
-        Alert.alert("Cobi", data.message);
-        fetchUserData(); // Refresh dashboard balance after transaction
+      const durMs = Date.now() - startedAtRef.current;
+
+      await rec.stopAndUnloadAsync();
+      const uri = rec.getURI();
+      recordingRef.current = null;
+
+      if (!uri) throw new Error("No recording URI");
+      if (durMs < 600) {
+        setSpokenText("Too short—hold longer.");
+        return;
       }
-    } catch (err) {
-      console.error(err);
+
+      const transcript = await transcribeWithOpenAI(uri);
+      setSpokenText(transcript || "(No speech detected)");
+
+      if (!transcript?.trim()) return;
+
+      // 1) Add user's new message into local history
+      const nextHistory: CobiMsg[] = [
+        ...cobiHistory,
+        { role: "user", content: transcript.trim() },
+      ].slice(-COBI_HISTORY_LIMIT);
+
+      // 2) Call server with full messages so it remembers clarifications
+      const result = await callCobiAssistant(transcript.trim(), nextHistory);
+
+      // 3) Add assistant reply into history
+      const updatedHistory: CobiMsg[] = [
+        ...nextHistory,
+        { role: "assistant", content: (result?.reply ?? "").trim() },
+      ]
+        .filter((m) => m.content.trim().length > 0)
+        .slice(-COBI_HISTORY_LIMIT);
+
+      setCobiHistory(updatedHistory);
+
+      if (result?.reply) {
+        setCobiReply(result.reply);
+        speak(result.reply);
+      }
+
+      if (result?.action?.type === "navigate") {
+        router.push({
+          pathname: result.action.pathname,
+          params: result.action.params ?? {},
+        } as any);
+      }
+    } catch (e: any) {
+      console.error(e);
+      Alert.alert("Cobi", String(e?.message ?? e));
+    } finally {
+      setCobiBusy(false);
     }
+  };
+
+  const transcribeWithOpenAI = async (fileUri: string): Promise<string> => {
+    const key = process.env.EXPO_PUBLIC_OPENAI_API_KEY;
+    if (!key) return "(No API key set)";
+
+    const form = new FormData();
+    form.append("model", "gpt-4o-mini-transcribe");
+    // @ts-ignore
+    form.append("file", { uri: fileUri, name: "audio.m4a", type: "audio/m4a" });
+
+    const res = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${key}` },
+      body: form,
+    });
+
+    if (!res.ok) throw new Error(await res.text());
+    const data = await res.json();
+    return String(data.text ?? "");
   };
 
   // Payment Request Listener
   useEffect(() => {
-     if (!selectedAccount?.accountNumber) return;
+    if (!selectedAccount?.accountNumber) return;
 
-     const checkRequests = async () => {
-         const { data, error } = await supabase
-             .from('PaymentRequests')
-             .select('*')
-             .eq('receiver_account_no', selectedAccount.accountNumber)
-             .eq('status', 'pending');
-         
-         if (data && data.length > 0) {
-             setPendingRequest(data[0]);
-             setShowRequestModal(true);
-         }
-     };
+    const checkRequests = async () => {
+      const { data } = await supabase
+        .from("PaymentRequests")
+        .select("*")
+        .eq("receiver_account_no", selectedAccount.accountNumber)
+        .eq("status", "pending");
 
-     checkRequests();
+      if (data && data.length > 0) {
+        setPendingRequest(data[0]);
+        setShowRequestModal(true);
+      }
+    };
 
-     const channel = supabase.channel('home_requests')
-        .on('postgres_changes', 
-            { event: 'INSERT', schema: 'public', table: 'PaymentRequests', filter: `receiver_account_no=eq.${selectedAccount.accountNumber}` },
-            (payload) => {
-                setPendingRequest(payload.new);
-                setShowRequestModal(true);
-            }
-        )
-        .subscribe();
+    checkRequests();
 
-     return () => { supabase.removeChannel(channel); };
+    const channel = supabase
+      .channel("home_requests")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "PaymentRequests",
+          filter: `receiver_account_no=eq.${selectedAccount.accountNumber}`,
+        },
+        (payload) => {
+          setPendingRequest(payload.new);
+          setShowRequestModal(true);
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [selectedAccount?.accountNumber]);
 
   const handleAcceptRequest = async () => {
-      if (!pendingRequest || !selectedAccount) return;
-      
-      try {
-          // 1. Transfer
-          const { data, error } = await supabase.rpc('transfer_funds', {
-            sender_account_no: selectedAccount.accountNumber,     
-            receiver_account_no: pendingRequest.sender_account_no, 
-            amount: pendingRequest.amount,
-            description: pendingRequest.description || `Payment Request Accepted`
-        });
+    if (!pendingRequest || !selectedAccount) return;
 
-        if (error) throw error;
-        if (data && data.error) throw new Error(data.error);
+    try {
+      const { data, error } = await supabase.rpc("transfer_funds", {
+        sender_account_no: selectedAccount.accountNumber,
+        receiver_account_no: pendingRequest.sender_account_no,
+        amount: pendingRequest.amount,
+        description: pendingRequest.description || `Payment Request Accepted`,
+      });
 
-        // 2. Update Request Status
-        await supabase
-            .from('PaymentRequests')
-            .update({ status: 'accepted' })
-            .eq('id', pendingRequest.id);
+      if (error) throw error;
+      if (data && data.error) throw new Error(data.error);
 
-        Alert.alert("Success", `Paid SGD ${pendingRequest.amount} to sender.`);
-        setShowRequestModal(false);
-        setPendingRequest(null);
-        fetchUserData(); // refresh balance
-        if(selectedAccount?.accountNumber) fetchTransactions(selectedAccount.accountNumber);
+      await supabase
+        .from("PaymentRequests")
+        .update({ status: "accepted" })
+        .eq("id", pendingRequest.id);
 
-      } catch (e: any) {
-          Alert.alert("Error", e.message);
-      }
+      Alert.alert("Success", `Paid SGD ${pendingRequest.amount} to sender.`);
+      setShowRequestModal(false);
+      setPendingRequest(null);
+      fetchUserData();
+      if (selectedAccount?.accountNumber)
+        fetchTransactions(selectedAccount.accountNumber);
+    } catch (e: any) {
+      Alert.alert("Error", e.message);
+    }
   };
 
   const handleDeclineRequest = async () => {
-      if (!pendingRequest) return;
-      await supabase
-            .from('PaymentRequests')
-            .update({ status: 'declined' })
-            .eq('id', pendingRequest.id);
-      
-      setShowRequestModal(false);
-      setPendingRequest(null);
+    if (!pendingRequest) return;
+    await supabase
+      .from("PaymentRequests")
+      .update({ status: "declined" })
+      .eq("id", pendingRequest.id);
+
+    setShowRequestModal(false);
+    setPendingRequest(null);
   };
 
   if (loading) {
@@ -577,10 +645,13 @@ export default function HomePage() {
     );
   }
 
+  const showCobiPopup =
+    isCobiListening || cobiBusy || !!spokenText || !!cobiReply;
+
   return (
     <View className="flex-1 bg-gray-100">
       <ScrollView className="flex-1 bg-gray-100">
-        {/* Header Section */}
+        {/* Header */}
         <ImageBackground
           source={require("../assets/images/homepage_bg.png")}
           className="h-100 p-5 justify-between"
@@ -598,10 +669,12 @@ export default function HomePage() {
               </TouchableOpacity>
             </View>
           </View>
+
           <View className="mb-8" style={{ marginTop: 100 }}>
             <Text className="text-3xl font-bold text-gray-800 mb-3">
               {getTranslation("welcome", language)}, {userName}
             </Text>
+
             {accounts.length > 1 && (
               <TouchableOpacity
                 onPress={() => setShowAccountModal(true)}
@@ -617,12 +690,12 @@ export default function HomePage() {
           </View>
         </ImageBackground>
 
-        {/* Quick Actions Card */}
+        {/* Quick Actions */}
         <View className="bg-white mx-4 -mt-12 p-5 rounded-xl shadow-lg flex-row justify-around relative">
           <View className="items-center">
             <TouchableOpacity
               className="bg-gray-100 p-3 rounded-full mb-1"
-              onPress={() => router.push("/paynow")}
+              onPress={() => router.push("/paynow" as any)}
             >
               <FontAwesome6 name="comment-dollar" size={20} color="black" />
             </TouchableOpacity>
@@ -634,9 +707,13 @@ export default function HomePage() {
           <View className="items-center">
             <TouchableOpacity
               className="bg-gray-100 p-3 rounded-full mb-1"
-              onPress={() => router.push("/givenow")}
+              onPress={() => router.push("/givenow" as any)}
             >
-              <FontAwesome6 name="hand-holding-dollar" size={20} color="black" />
+              <FontAwesome6
+                name="hand-holding-dollar"
+                size={20}
+                color="black"
+              />
             </TouchableOpacity>
             <Text className="text-xs text-gray-600">GiveNow</Text>
           </View>
@@ -665,7 +742,7 @@ export default function HomePage() {
           </View>
         </View>
 
-        {/* Account Tabs */}
+        {/* Tabs */}
         <View className="flex-row items-center p-4">
           <TouchableOpacity
             onPress={() => setIsHidden(!isHidden)}
@@ -687,10 +764,16 @@ export default function HomePage() {
               <TouchableOpacity
                 key={tab}
                 onPress={() => setActiveTab(tab)}
-                className={`px-5 py-2 rounded-full border mr-2 ${activeTab === tab ? "bg-red-600 border-red-600" : "bg-white border-gray-300"}`}
+                className={`px-5 py-2 rounded-full border mr-2 ${
+                  activeTab === tab
+                    ? "bg-red-600 border-red-600"
+                    : "bg-white border-gray-300"
+                }`}
               >
                 <Text
-                  className={`capitalize ${activeTab === tab ? "text-white font-bold" : "text-gray-600"}`}
+                  className={`capitalize ${
+                    activeTab === tab ? "text-white font-bold" : "text-gray-600"
+                  }`}
                 >
                   {getTranslation(tab, language)}
                 </Text>
@@ -699,7 +782,7 @@ export default function HomePage() {
           </ScrollView>
         </View>
 
-        {/* Account Details Card */}
+        {/* Account card */}
         {selectedAccount ? (
           <TouchableOpacity
             className="bg-[#f6ecec] mx-4 p-5 rounded-xl border border-gray-200"
@@ -709,11 +792,13 @@ export default function HomePage() {
                 params: {
                   accountType:
                     selectedAccount?.accountType ||
-                    `OCBC ${selectedAccount?.type === "foreign" ? "Foreign" : "FRANK"} Account`,
+                    `OCBC ${
+                      selectedAccount?.type === "foreign" ? "Foreign" : "FRANK"
+                    } Account`,
                   balance: selectedAccount?.balance?.toFixed(2) || "0.00",
                   accountNumber: selectedAccount?.accountNumber || "",
                 },
-              })
+              } as any)
             }
           >
             <View className="flex-row justify-between items-center mb-4">
@@ -734,19 +819,27 @@ export default function HomePage() {
                 <View>
                   <Text className="text-xl font-bold text-gray-800">
                     {selectedAccount?.accountType ||
-                      `OCBC ${selectedAccount?.type === "foreign" ? "Foreign" : "FRANK"} Account`}
+                      `OCBC ${
+                        selectedAccount?.type === "foreign"
+                          ? "Foreign"
+                          : "FRANK"
+                      } Account`}
                   </Text>
                   <Text
-                    className={`text-base font-medium text-black-600 mt-1 ${isHidden ? "bg-black-200 text-transparent" : ""}`}
+                    className={`text-base font-medium text-black-600 mt-1 ${
+                      isHidden ? "bg-black-200 text-transparent" : ""
+                    }`}
                   >
                     {isHidden
                       ? "•••••••••••"
                       : (() => {
                           const accNo =
                             selectedAccount?.accountNumber || "123456789";
-                          // Format as XXX-XXXXX-XXX
                           if (accNo.length >= 9) {
-                            return `${accNo.slice(0, 3)}-${accNo.slice(3, -3)}-${accNo.slice(-3)}`;
+                            return `${accNo.slice(0, 3)}-${accNo.slice(
+                              3,
+                              -3,
+                            )}-${accNo.slice(-3)}`;
                           }
                           return accNo;
                         })()}
@@ -761,13 +854,16 @@ export default function HomePage() {
                 {getTranslation("availableBalance", language)}
               </Text>
               <Text
-                className={`text-xl font-bold ${isHidden ? "bg-black-200 text-transparent" : "text-black-800"}`}
+                className={`text-xl font-bold ${
+                  isHidden ? "bg-black-200 text-transparent" : "text-black-800"
+                }`}
               >
                 {isHidden
                   ? "••••••"
                   : `${selectedAccount?.balance?.toFixed(2) || "0.00"} SGD`}
               </Text>
             </View>
+
             <View className="border-t border-gray-200 pt-3 flex-row justify-between items-center">
               <Text className="text-gray-700 text-base">
                 {selectedAccount?.accountType?.toLowerCase().includes("credit")
@@ -775,21 +871,18 @@ export default function HomePage() {
                   : getTranslation("debitCardNo", language)}
               </Text>
               <Text
-                className={`text-base font-medium text-black-600 ${isHidden ? "bg-black-200 text-transparent" : ""}`}
+                className={`text-base font-medium text-black-600 ${
+                  isHidden ? "bg-black-200 text-transparent" : ""
+                }`}
               >
                 {isHidden
                   ? "••••••••••••"
                   : (() => {
                       const accNo =
                         selectedAccount?.accountNumber || "123456789";
-                      // Format as XXXX-XXXX-XXXX for card display
-                      if (accNo.length >= 9) {
-                        // Group digits in sets of 4
-                        const formatted =
-                          accNo.match(/.{1,4}/g)?.join("-") || accNo;
-                        return formatted;
-                      }
-                      return accNo;
+                      const formatted =
+                        accNo.match(/.{1,4}/g)?.join("-") || accNo;
+                      return formatted;
                     })()}
               </Text>
             </View>
@@ -809,49 +902,72 @@ export default function HomePage() {
               <Text className="text-xl font-bold text-gray-800">
                 {getTranslation("recentTransactions", language)}
               </Text>
-              <TouchableOpacity onPress={() => router.push({
-                pathname: '/transactions',
-                params: { accountNo: selectedAccount.accountNumber }
-              })}>
-                <Text className="text-sm font-semibold text-red-600">View All</Text>
+              <TouchableOpacity
+                onPress={() =>
+                  router.push({
+                    pathname: "/transactions",
+                    params: { accountNo: selectedAccount.accountNumber },
+                  } as any)
+                }
+              >
+                <Text className="text-sm font-semibold text-red-600">
+                  View All
+                </Text>
               </TouchableOpacity>
             </View>
-            <Text className="text-sm text-gray-500 mb-3">
-              Past 3 days
-            </Text>
+            <Text className="text-sm text-gray-500 mb-3">Past 3 days</Text>
 
             {transactions.length > 0 ? (
-                transactions.map((tx) => {
-                    const isReceived = tx.receiveraccountNo === selectedAccount.accountNumber;
-                    const amount = parseFloat(tx.amount.toString());
-                    const date = new Date(tx.created_at).toLocaleDateString("en-GB", {
-                          day: "numeric",
-                          month: "short",
-                        });
+              transactions.map((tx) => {
+                const isReceived =
+                  tx.receiveraccountNo === selectedAccount.accountNumber;
+                const amount = parseFloat(tx.amount.toString());
+                const date = new Date(tx.created_at).toLocaleDateString(
+                  "en-GB",
+                  {
+                    day: "numeric",
+                    month: "short",
+                  },
+                );
 
-                    return (
-                        <View key={tx.id} className="bg-white p-4 rounded-lg border border-gray-200 mb-2">
-                        <View className="flex-row justify-between items-center">
-                            <View className="flex-1">
-                            <Text className="text-xs text-gray-500 mb-1">{date}</Text>
-                            <Text className="text-sm font-bold text-gray-800 mb-1">
-                                {isReceived ? "RECEIVED" : "SENT"}
-                            </Text>
-                            <Text className="text-sm text-gray-600">
-                                {tx.message || (isReceived ? `From ${tx.senderaccountNo}` : `To ${tx.receiveraccountNo}`)}
-                            </Text>
-                            </View>
-                            <Text className={`text-base font-semibold ${isReceived ? "text-green-600" : "text-black"}`}>
-                            {isReceived ? "+" : "-"}{Math.abs(amount).toFixed(2)}
-                            </Text>
-                        </View>
-                        </View>
-                    );
-                })
+                return (
+                  <View
+                    key={tx.id}
+                    className="bg-white p-4 rounded-lg border border-gray-200 mb-2"
+                  >
+                    <View className="flex-row justify-between items-center">
+                      <View className="flex-1">
+                        <Text className="text-xs text-gray-500 mb-1">
+                          {date}
+                        </Text>
+                        <Text className="text-sm font-bold text-gray-800 mb-1">
+                          {isReceived ? "RECEIVED" : "SENT"}
+                        </Text>
+                        <Text className="text-sm text-gray-600">
+                          {tx.message ||
+                            (isReceived
+                              ? `From ${tx.senderaccountNo}`
+                              : `To ${tx.receiveraccountNo}`)}
+                        </Text>
+                      </View>
+                      <Text
+                        className={`text-base font-semibold ${
+                          isReceived ? "text-green-600" : "text-black"
+                        }`}
+                      >
+                        {isReceived ? "+" : "-"}
+                        {Math.abs(amount).toFixed(2)}
+                      </Text>
+                    </View>
+                  </View>
+                );
+              })
             ) : (
-                <View className="p-4 rounded-lg border border-gray-200 bg-white items-center">
-                    <Text className="text-gray-500 italic">No recent transactions</Text>
-                </View>
+              <View className="p-4 rounded-lg border border-gray-200 bg-white items-center">
+                <Text className="text-gray-500 italic">
+                  No recent transactions
+                </Text>
+              </View>
             )}
           </View>
         )}
@@ -957,9 +1073,10 @@ export default function HomePage() {
         </View>
       </Modal>
 
-      {/* Floating Cobi Button */}
+      {/* Floating Cobi Button (hold to talk) */}
       <TouchableOpacity
-        onPress={handleCobiPress}
+        onPressIn={startCobiRecording}
+        onPressOut={stopCobiRecording}
         style={[
           styles.cobiButton,
           { backgroundColor: isCobiListening ? "#da291c" : "#0066cc" },
@@ -972,15 +1089,43 @@ export default function HomePage() {
         />
       </TouchableOpacity>
 
-      {/* Cobi Listening Popup */}
-      {isCobiListening && (
+      {/* Cobi Popup */}
+      {showCobiPopup && (
         <View style={styles.cobiPopup}>
-          <Text style={styles.cobiTitle}>Cobi Assistant</Text>
-          <Text style={styles.cobiText}>{spokenText || "Listening..."}</Text>
+          <View
+            style={{ flexDirection: "row", justifyContent: "space-between" }}
+          >
+            <Text style={styles.cobiTitle}>Cobi Assistant</Text>
+            <TouchableOpacity
+              onPress={() => {
+                setSpokenText("");
+                setCobiReply("");
+                setCobiHistory([]); // ✅ clear memory when closing
+              }}
+            >
+              <Text style={{ color: "#666", fontSize: 16 }}>✕</Text>
+            </TouchableOpacity>
+          </View>
+
+          <Text style={styles.cobiText}>
+            {isCobiListening
+              ? "Listening…"
+              : spokenText
+                ? `You: ${spokenText}`
+                : "Ready"}
+          </Text>
+
+          {cobiBusy && <Text style={styles.cobiText}>Processing…</Text>}
+
+          {!!cobiReply && (
+            <Text style={[styles.cobiText, { marginTop: 8 }]}>
+              Cobi: {cobiReply}
+            </Text>
+          )}
         </View>
       )}
 
-      {/* Bottom Navigation */}
+      {/* Bottom Nav */}
       <View style={styles.bottomNav}>
         <TouchableOpacity
           style={[styles.navItem, styles.navItemActive]}
@@ -991,15 +1136,17 @@ export default function HomePage() {
             {getTranslation("home", language)}
           </Text>
         </TouchableOpacity>
+
         <TouchableOpacity
           style={styles.navItem}
-          onPress={() => router.push("/transferscreen")}
+          onPress={() => router.push("/transferscreen" as any)}
         >
           <FontAwesome5 name="exchange-alt" size={22} color="#888" />
           <Text style={styles.navItemText}>
             {getTranslation("payAndTransfer", language)}
           </Text>
         </TouchableOpacity>
+
         <TouchableOpacity
           style={styles.navItem}
           onPress={() => navigation.navigate("more" as never)}
@@ -1011,33 +1158,6 @@ export default function HomePage() {
         </TouchableOpacity>
       </View>
 
-      {/* Camera Modal */}
-      <Modal
-        visible={showScanner}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => setShowScanner(false)}
-      >
-        <View className="flex-1 bg-black">
-          <CameraView
-            style={{ flex: 1 }}
-            facing="back"
-            onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
-          />
-          <View className="absolute top-0 left-0 right-0 p-12 items-center">
-            <Text className="text-white text-lg font-bold bg-black/50 p-2 rounded-lg overflow-hidden">
-              Scan QR Code
-            </Text>
-          </View>
-          <TouchableOpacity
-            onPress={() => setShowScanner(false)}
-            className="absolute top-4 right-4 bg-white/20 p-2 rounded-full"
-          >
-            <FontAwesome6 name="xmark" size={24} color="white" />
-          </TouchableOpacity>
-        </View>
-      </Modal>
-
       {/* Payment Request Modal */}
       <Modal
         animationType="fade"
@@ -1045,32 +1165,42 @@ export default function HomePage() {
         visible={showRequestModal}
         onRequestClose={() => {}}
       >
-         <View className="flex-1 bg-black/60 items-center justify-center p-6">
-            <View className="bg-white rounded-2xl p-6 w-full max-w-sm items-center">
-                 <FontAwesome6 name="money-bill-transfer" size={48} color="#2563eb" style={{ marginBottom: 16 }} />
-                 <Text className="text-xl font-bold text-gray-800 text-center mb-2">Request Received</Text>
-                 <Text className="text-gray-600 text-center mb-6">
-                    <Text className="font-bold">{pendingRequest?.description || 'Someone'}</Text> is requesting <Text className="font-bold">SGD {pendingRequest?.amount}</Text>.
-                 </Text>
-                 
-                 <View className="flex-row gap-3 w-full">
-                    <TouchableOpacity 
-                        onPress={handleDeclineRequest}
-                        className="flex-1 py-3 bg-red-100 rounded-xl items-center"
-                    >
-                        <Text className="text-red-700 font-bold">Decline</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity 
-                        onPress={handleAcceptRequest}
-                        className="flex-1 py-3 bg-green-600 rounded-xl items-center"
-                    >
-                        <Text className="text-white font-bold">Pay Now</Text>
-                    </TouchableOpacity>
-                 </View>
-            </View>
-         </View>
-      </Modal>
+        <View className="flex-1 bg-black/60 items-center justify-center p-6">
+          <View className="bg-white rounded-2xl p-6 w-full max-w-sm items-center">
+            <FontAwesome6
+              name="money-bill-transfer"
+              size={48}
+              color="#2563eb"
+              style={{ marginBottom: 16 }}
+            />
+            <Text className="text-xl font-bold text-gray-800 text-center mb-2">
+              Request Received
+            </Text>
+            <Text className="text-gray-600 text-center mb-6">
+              <Text className="font-bold">
+                {pendingRequest?.description || "Someone"}
+              </Text>{" "}
+              is requesting{" "}
+              <Text className="font-bold">SGD {pendingRequest?.amount}</Text>.
+            </Text>
 
+            <View className="flex-row gap-3 w-full">
+              <TouchableOpacity
+                onPress={handleDeclineRequest}
+                className="flex-1 py-3 bg-red-100 rounded-xl items-center"
+              >
+                <Text className="text-red-700 font-bold">Decline</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleAcceptRequest}
+                className="flex-1 py-3 bg-green-600 rounded-xl items-center"
+              >
+                <Text className="text-white font-bold">Pay Now</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -1090,21 +1220,11 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 10,
   },
-  navItem: {
-    flex: 1,
-    alignItems: "center",
-    paddingVertical: 6,
-  },
+  navItem: { flex: 1, alignItems: "center", paddingVertical: 6 },
   navItemActive: {},
-  navItemText: {
-    fontSize: 12,
-    fontWeight: "500",
-    color: "#888",
-    marginTop: 4,
-  },
-  navItemTextActive: {
-    color: "#da291c",
-  },
+  navItemText: { fontSize: 12, fontWeight: "500", color: "#888", marginTop: 4 },
+  navItemTextActive: { color: "#da291c" },
+
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0, 0, 0, 0.5)",
@@ -1124,19 +1244,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#e5e5e5",
   },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#333",
-  },
-  modalClose: {
-    fontSize: 24,
-    color: "#666",
-    fontWeight: "300",
-  },
-  accountList: {
-    maxHeight: 400,
-  },
+  modalTitle: { fontSize: 18, fontWeight: "600", color: "#333" },
+  modalClose: { fontSize: 24, color: "#666", fontWeight: "300" },
+  accountList: { maxHeight: 400 },
   accountOption: {
     flexDirection: "row",
     alignItems: "center",
@@ -1144,9 +1254,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#f0f0f0",
   },
-  accountOptionSelected: {
-    backgroundColor: "#f5f5f5",
-  },
+  accountOptionSelected: { backgroundColor: "#f5f5f5" },
   accountIcon: {
     width: 50,
     height: 50,
@@ -1156,29 +1264,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginRight: 12,
   },
-  accountIconText: {
-    color: "#fff",
-    fontWeight: "700",
-    fontSize: 14,
-  },
-  accountInfo: {
-    flex: 1,
-  },
+  accountIconText: { color: "#fff", fontWeight: "700", fontSize: 14 },
+  accountInfo: { flex: 1 },
   accountName: {
     fontSize: 16,
     fontWeight: "600",
     color: "#333",
     marginBottom: 2,
   },
-  accountType: {
-    fontSize: 13,
-    color: "#666",
-    marginBottom: 2,
-  },
-  accountNumber: {
-    fontSize: 12,
-    color: "#999",
-  },
+  accountType: { fontSize: 13, color: "#666", marginBottom: 2 },
+  accountNumber: { fontSize: 12, color: "#999" },
+
   cobiButton: {
     position: "absolute",
     bottom: 110,
@@ -1216,9 +1312,5 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     fontSize: 14,
   },
-  cobiText: {
-    fontStyle: "italic",
-    fontSize: 12,
-    color: "#666",
-  },
+  cobiText: { fontStyle: "italic", fontSize: 12, color: "#666" },
 });
