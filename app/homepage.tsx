@@ -4,7 +4,7 @@ import { Audio } from "expo-av";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { Link, useNavigation, useRouter } from "expo-router";
 import * as Speech from "expo-speech";
-import React, { useEffect, useRef, useState } from "react";
+import { default as React, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -1180,9 +1180,13 @@ export default function HomePage() {
       {/* Bottom Nav */}
       <View style={styles.bottomNav}>
         <TouchableOpacity
+          style={styles.navItem}
+          onPress={() => router.push("/homepage")}
           style={[styles.navItem, styles.navItemActive]}
           onPress={() => navigation.navigate("homepage" as never)}
         >
+          <FontAwesome5 name="home" size={22} color="#888" />
+          <Text style={styles.navText}>Home</Text>
           <FontAwesome5 name="home" size={22} color="#da291c" />
           <Text style={[styles.navItemText, styles.navItemTextActive]}>
             {getTranslation("home", language)}
@@ -1193,6 +1197,12 @@ export default function HomePage() {
           style={styles.navItem}
           onPress={() => router.push("/transferscreen" as any)}
         >
+          <FontAwesome5 name="exchange-alt" size={22} color="#da291c" />
+          <Text
+            style={[styles.navText, { color: "#da291c", fontWeight: "600" }]}
+          >
+            Pay & Transfer
+          </Text>
           <FontAwesome5 name="exchange-alt" size={22} color="#888" />
           <Text style={styles.navItemText}>
             {getTranslation("payAndTransfer", language)}
@@ -1204,6 +1214,7 @@ export default function HomePage() {
           onPress={() => navigation.navigate("more" as never)}
         >
           <FontAwesome5 name="th-large" size={22} color="#888" />
+          <Text style={styles.navText}>More</Text>
           <Text style={styles.navItemText}>
             {getTranslation("more", language)}
           </Text>
