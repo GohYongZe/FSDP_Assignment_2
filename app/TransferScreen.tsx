@@ -10,9 +10,19 @@ import {
   View,
 } from "react-native";
 import Icon from "react-native-vector-icons/FontAwesome5";
+import { useTutorial } from "./components/TutorialContext"; // Import useTutorial
+import { useTutorialTarget } from "./components/useTutorialTarget"; // Import useTutorialTarget
 
 const TransferScreen = ({ navigation }: { navigation: any }) => {
   const router = useRouter();
+  const { startTutorial } = useTutorial(); // Use the hook
+
+  // Use the new hook to get refs for tutorial targets
+  const searchIconRef = useTutorialTarget("tutorial-search-icon");
+  const transfersCardRef = useTutorialTarget("tutorial-transfers-card");
+  const payNowActionRef = useTutorialTarget("tutorial-paynow-action");
+  const recentRecipientsRef = useTutorialTarget("tutorial-recent-recipients");
+
   const recipients = [
     { id: "1", name: "John L.", initials: "JL", color: "#005eb8" },
     { id: "2", name: "Mary Y.", initials: "MY", color: "#da291c" },
@@ -38,27 +48,57 @@ const TransferScreen = ({ navigation }: { navigation: any }) => {
       {/* Top Bar */}
       <View style={styles.topBar}>
         <Text style={styles.headerText}>Pay & Transfer</Text>
-        <TouchableOpacity>
-          <Icon name="search" size={18} color="#333" />
-        </TouchableOpacity>
+        <View style={{ flexDirection: "row", alignItems: "center" }}>
+          <TouchableOpacity
+            ref={searchIconRef}
+            testID="tutorial-search-icon"
+            style={{ marginRight: 20 }}
+          >
+            <Icon name="search" size={18} color="#333" />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => startTutorial()}>
+            <Icon name="question-circle" size={24} color="#333" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Main Transfers Card */}
-        <View style={styles.mainActionsCard}>
+        <View
+          ref={transfersCardRef}
+          testID="tutorial-transfers-card"
+          style={styles.mainActionsCard}
+        >
           <Text style={styles.sectionTitle}>Transfers</Text>
           <View style={styles.actionGrid}>
-            {actions.map((action, index) => (
-              <TouchableOpacity key={index} style={styles.actionItem}>
-                <Icon name={action.icon} size={28} color="#da291c" />
-                <Text style={styles.actionLabel}>{action.name}</Text>
-              </TouchableOpacity>
-            ))}
+            {actions.map((action, index) => {
+              // Conditionally apply ref and testID for PayNow action
+              const isPayNow = action.name === 'PayNow';
+              const actionProps = isPayNow ? {
+                ref: payNowActionRef,
+                testID: "tutorial-paynow-action",
+              } : {};
+
+              return (
+                <TouchableOpacity
+                  key={index}
+                  style={styles.actionItem}
+                  {...actionProps} // Spread conditional props
+                >
+                  <Icon name={action.icon} size={28} color="#da291c" />
+                  <Text style={styles.actionLabel}>{action.name}</Text>
+                </TouchableOpacity>
+              )
+            })}
           </View>
         </View>
 
         {/* Recent Recipients */}
-        <View style={styles.recipientsSection}>
+        <View
+          ref={recentRecipientsRef}
+          testID="tutorial-recent-recipients"
+          style={styles.recipientsSection}
+        >
           <Text style={styles.sectionTitle}>Recent Recipients</Text>
           <ScrollView
             horizontal

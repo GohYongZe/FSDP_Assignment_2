@@ -1,9 +1,13 @@
 import React from 'react';
 import { View, StyleSheet, TouchableOpacity, Text, Modal } from 'react-native';
-import { useTutorial } from './TutorialContext';
+import { useTutorial, TutorialStep } from './TutorialContext';
 
-const TutorialOverlay = () => {
-  const { stopTutorial, steps, showStep, activeStep } = useTutorial();
+interface TutorialOverlayProps {
+  steps: TutorialStep[];
+}
+
+const TutorialOverlay: React.FC<TutorialOverlayProps> = ({ steps }) => {
+  const { stopTutorial, showStep, activeStep } = useTutorial();
 
   const handleStepPress = (stepId: string) => {
     showStep(stepId);

@@ -1,5 +1,5 @@
-import React, { createContext, useContext, ReactNode } from 'react';
-import { LayoutRectangle } from 'react-native';
+import React, { createContext, useContext } from 'react';
+import { LayoutRectangle, View } from 'react-native';
 
 export interface TutorialStep {
   id: string;
@@ -13,8 +13,8 @@ interface TutorialContextType {
   startTutorial: () => void;
   stopTutorial: () => void;
   showStep: (stepId: string) => void;
-  registerStep: (step: TutorialStep) => void;
-  steps: TutorialStep[];
+  registerTarget: (id: string, ref: React.RefObject<View>) => void;
+  unregisterTarget: (id: string) => void;
 }
 
 export const TutorialContext = createContext<TutorialContextType | undefined>(undefined);

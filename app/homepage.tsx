@@ -1,6 +1,6 @@
 import { FontAwesome5, FontAwesome6 } from "@expo/vector-icons";
 import { Link, useRouter } from "expo-router";
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -11,10 +11,10 @@ import {
   Text,
   TouchableOpacity,
   View,
-  LayoutRectangle,
 } from "react-native";
 import { supabase } from "../lib/supabase";
 import { useTutorial } from "./components/TutorialContext";
+import { useTutorialTarget } from "./components/useTutorialTarget";
 
 interface Account {
   id: string;
@@ -28,7 +28,11 @@ interface Account {
 
 export default function HomePage() {
   const router = useRouter();
-  const { startTutorial, registerStep } = useTutorial();
+  const { startTutorial } = useTutorial();
+
+  // Use the new hook to get refs for tutorial targets
+  const payNowRef = useTutorialTarget("tutorial-paynow-button");
+  const tabsRef = useTutorialTarget("tutorial-tabs");
 
   // State from homepage.tsx
   const [isHidden, setIsHidden] = useState(true);
@@ -42,10 +46,6 @@ export default function HomePage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
   const [showAccountModal, setShowAccountModal] = useState(false);
-
-  // Refs for tutorial elements
-  const quickActionsRef = useRef<View>(null);
-  const tabsRef = useRef<View>(null);
 
   useEffect(() => {
     fetchUserData();
@@ -247,15 +247,6 @@ export default function HomePage() {
     ]);
   };
 
-  const onLayout = (ref: React.RefObject<View>, id: string, text: string) => {
-    if (ref.current) {
-      ref.current.measure((x, y, width, height, pageX, pageY) => {
-        const layout = { x: pageX, y: pageY, width, height };
-        registerStep({ id, layout, text });
-      });
-    }
-  };
-
   if (loading) {
     return (
       <View className="flex-1 justify-center items-center bg-white">
@@ -307,18 +298,17 @@ export default function HomePage() {
         </ImageBackground>
 
         {/* Quick Actions Card */}
-        <View
-          ref={quickActionsRef}
-          onLayout={() => onLayout(quickActionsRef, 'quick-actions', 'This is the Quick Actions section. You can quickly access features like PayNow.')}
-          className="bg-white mx-4 -mt-12 p-5 rounded-xl shadow-lg flex-row justify-around relative">
+        <View className="bg-white mx-4 -mt-12 p-5 rounded-xl shadow-lg flex-row justify-around relative">
           <TouchableOpacity className="absolute top-2 right-2">
             <FontAwesome6 name="gear" size={16} color="gray" />
           </TouchableOpacity>
 
           <View className="items-center">
             <TouchableOpacity
+              ref={payNowRef}
+              testID="tutorial-paynow-button"
               className="bg-gray-100 p-3 rounded-full mb-1"
-              onPress={() => router.push("/transferscreen")}
+              onPress={() => router.push("/TransferScreen")}
             >
               <FontAwesome6 name="comment-dollar" size={20} color="black" />
             </TouchableOpacity>
@@ -328,9 +318,9 @@ export default function HomePage() {
         </View>
 
         {/* Account Tabs */}
-        <View 
+        <View
           ref={tabsRef}
-          onLayout={() => onLayout(tabsRef, 'tabs', 'These tabs let you switch between your accounts, cards, and investments.')}
+          testID="tutorial-tabs"
           className="flex-row items-center p-4">
           <TouchableOpacity
             onPress={() => setIsHidden(!isHidden)}
@@ -352,10 +342,18 @@ export default function HomePage() {
               <TouchableOpacity
                 key={tab}
                 onPress={() => setActiveTab(tab)}
-                className={`px-5 py-2 rounded-full border mr-2 ${activeTab === tab ? "bg-red-600 border-red-600" : "bg-white border-gray-300"}`}
+                className={`px-5 py-2 rounded-full border mr-2 ${
+                  activeTab === tab
+                    ? "bg-red-600 border-red-600"
+                    : "bg-white border-gray-300"
+                }`}
               >
                 <Text
-                  className={`capitalize ${activeTab === tab ? "text-white font-bold" : "text-gray-600"}`}
+                  className={`capitalize ${
+                    activeTab === tab
+                      ? "text-white font-bold"
+                      : "text-gray-600"
+                  }`}
                 >
                   {tab}
                 </Text>
@@ -428,7 +426,7 @@ export default function HomePage() {
               <TouchableOpacity onPress={() => setShowAccountModal(false)}>
                 <Text style={styles.modalClose}>✕</Text>
               </TouchableOpacity>
-            </V>
+            </View>
             <ScrollView style={styles.accountList}>
               {accounts.length > 0 ? (
                 accounts.map((account) => (
@@ -482,27 +480,29 @@ export default function HomePage() {
       {/* Bottom Navigation */}
       <View style={styles.bottomNav}>
         <TouchableOpacity
-          style={[styles.navItem, styles.navItemActive]}
+          style={styles.navItem}
           onPress={() => router.push("/homepage")}
         >
-          <FontAwesome5 name="home" size={22} color="#da291c" />
-          <Text style={[styles.navItemText, styles.navItemTextActive]}>
-            Home
-          </Text>
+          <FontAwesome5 name="home" size={22} color="#888" />
+          <Text style={styles.navText}>Home</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.navItem}
-          onPress={() => router.push("/transferscreen")}
+          onPress={() => router.push("/TransferScreen")}
         >
-          <FontAwesome5 name="exchange-alt" size={22} color="#888" />
-          <Text style={styles.navItemText}>Pay & Transfer</Text>
+          <FontAwesome5 name="exchange-alt" size={22} color="#da291c" />
+          <Text
+            style={[styles.navText, { color: "#da291c", fontWeight: "600" }]}
+          >
+            Pay & Transfer
+          </Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.navItem}
           onPress={() => router.push("/more")}
         >
           <FontAwesome5 name="th-large" size={22} color="#888" />
-          <Text style={styles.navItemText}>More</Text>
+          <Text style={styles.navText}>More</Text>
         </TouchableOpacity>
       </View>
     </View>
