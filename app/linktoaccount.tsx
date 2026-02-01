@@ -152,7 +152,7 @@ export default function LinkToAccount() {
 
   return (
     <ScrollView className="flex-1 bg-gray-50 p-4">
-      <View className="flex-row items-center mb-6 mt-2">
+      <View className="flex-row items-center mb-6 mt-12">
         <TouchableOpacity onPress={() => router.back()} className="mr-3 p-1">
           <MaterialIcons name="arrow-back" size={24} color="#374151" />
         </TouchableOpacity>
