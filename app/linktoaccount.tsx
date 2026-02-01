@@ -1,7 +1,8 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { CameraView, useCameraPermissions } from 'expo-camera';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { supabase } from '../lib/supabase';
 
 interface UserAccount {
@@ -13,9 +14,56 @@ interface UserAccount {
 
 export default function LinkToAccount() {
   const router = useRouter();
+  const params = useLocalSearchParams();
   const [accountNumber, setAccountNumber] = useState('');
   const [nickname, setNickname] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (params.accountNo) setAccountNumber(params.accountNo as string);
+    if (params.name) setNickname(params.name as string);
+  }, [params]);
+  
+  // camera state
+  const [showScanner, setShowScanner] = useState(false);
+  const [permission, requestPermission] = useCameraPermissions();
+  const [scanned, setScanned] = useState(false);
+
+  const handleScan = () => {
+      if (!permission) {
+          requestPermission();
+          return;
+      }
+      if (!permission.granted) {
+          Alert.alert("Permission Required", "Camera permission is needed to scan QR codes.", [
+              { text: "Cancel", style: "cancel" },
+              { text: "Grant", onPress: requestPermission }
+          ]);
+          return;
+      }
+      setScanned(false);
+      setShowScanner(true);
+  };
+
+  const handleBarCodeScanned = ({ type, data }: { type: string, data: string }) => {
+      setScanned(true);
+      setShowScanner(false);
+      try {
+          const parsed = JSON.parse(data);
+          if (parsed && parsed.accountNo) {
+            setAccountNumber(parsed.accountNo);
+            if (parsed.name) {
+                setNickname(parsed.name);
+            }
+            Alert.alert("Scanned!", `Account ${parsed.accountNo} found.`);
+          } else {
+              Alert.alert("Invalid QR", "This QR code does not contain account info.");
+          }
+      } catch (err) {
+          console.error("Error parsing QR:", err);
+          Alert.alert("Error", "Could not parse QR code data.");
+      }
+  };
 
   const fetchCurrentUser = async (): Promise<UserAccount | null> => {
     try {
@@ -91,7 +139,7 @@ export default function LinkToAccount() {
         Alert.alert(
           'Success', 
           'Account link request sent successfully!', 
-          [{ text: 'OK', onPress: () => router.back() }] // back to the previous screen
+          [{ text: 'OK', onPress: () => router.back() }] // back
         );
       }
     } catch (error) {
@@ -118,14 +166,22 @@ export default function LinkToAccount() {
 
         <View className="mb-4">
           <Text className="block text-sm font-medium text-gray-700 mb-1">Account Number</Text>
-          <TextInput
-            className="w-full bg-gray-50 border border-gray-300 rounded-lg p-3 text-gray-800"
-            placeholder="e.g. 1234567890"
-            value={accountNumber}
-            onChangeText={setAccountNumber}
-            keyboardType="numeric"
-            autoCapitalize="none"
-          />
+          <View className="flex-row gap-2">
+            <TextInput
+              className="flex-1 bg-gray-50 border border-gray-300 rounded-lg p-3 text-gray-800"
+              placeholder="e.g. 1234567890"
+              value={accountNumber}
+              onChangeText={setAccountNumber}
+              keyboardType="numeric"
+              autoCapitalize="none"
+            />
+            <TouchableOpacity 
+                onPress={handleScan}
+                className="bg-gray-800 w-12 rounded-lg items-center justify-center active:bg-gray-700"
+            >
+                <MaterialIcons name="qr-code-scanner" size={24} color="white" />
+            </TouchableOpacity>
+          </View>
         </View>
 
         <View className="mb-6">
@@ -152,6 +208,31 @@ export default function LinkToAccount() {
           </Text>
         </TouchableOpacity>
       </View>
+
+      {/* camera modal */}
+      <Modal
+        visible={showScanner}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowScanner(false)}
+      >
+        <View className="flex-1 bg-black">
+            <CameraView
+                style={{ flex: 1 }}
+                facing="back"
+                onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
+            />
+            <View className="absolute top-0 left-0 right-0 p-12 items-center">
+                 <Text className="text-white text-lg font-bold bg-black/50 p-2 rounded-lg">Scan Account QR</Text>
+            </View>
+            <TouchableOpacity 
+                onPress={() => setShowScanner(false)}
+                className="absolute top-4 right-4 bg-white/20 p-2 rounded-full"
+            >
+                <MaterialIcons name="close" size={24} color="white" />
+            </TouchableOpacity>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
