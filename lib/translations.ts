@@ -14,10 +14,17 @@ export const translations: Record<string, any> = {
     creditCardNo: "Credit card no.",
     recentTransactions: "Recent Transactions",
     upTo50Last7Days: "Up to 50 (last 7 days only)",
+    viewAll: "View All",
+    past3Days: "Past 3 days",
+    received: "RECEIVED",
+    sent: "SENT",
+    noRecentTransactions: "No recent transactions",
     transfer: "TRANSFER",
     payment: "PAYMENT",
     from: "From",
+    to: "To",
     selectAccount: "Select Account",
+    noTransactions: "No transactions for this period",
     noAccountsFound: "No accounts found. Please contact support.",
     home: "Home",
     payAndTransfer: "Pay & Transfer",
@@ -27,9 +34,15 @@ export const translations: Record<string, any> = {
     logoutConfirm: "Are you sure you want to logout?",
     cancel: "Cancel",
     error: "Error",
+    success: "Success",
     failedLogout: "Failed to logout",
     unexpectedError: "An unexpected error occurred",
     ok: "OK",
+    cobi: "Cobi",
+    recordingError: "Recording error",
+    recordingInProgress: "A recording is already in progress. Please wait.",
+    tooShort: "Too short—hold longer.",
+    noSpeechDetected: "(No speech detected)",
     
     // Camera/QR Scanner
     permission: "Permission",
@@ -41,6 +54,7 @@ export const translations: Record<string, any> = {
     // Payment Request
     paymentRequest: "Payment Request",
     paymentRequestMessage: "Do you want to pay SGD {amount} to {accountNo}?",
+    paymentSuccessMessage: "Paid SGD {amount} to sender.",
     pay: "Pay",
     
     // Link Account
@@ -84,6 +98,12 @@ export const translations: Record<string, any> = {
     salaryDeposit: "Salary Deposit",
     supermarketPurchase: "Supermarket Purchase",
     
+    // Transaction messages
+    paymentRequestFrom: "Payment Request from {name}",
+    paymentRequestAccepted: "Payment Request Accepted",
+    transferFrom: "Transfer from {name}",
+    transferTo: "Transfer to {name}",
+    
     // Transaction types
     transactionTransfer: "TRANSFER",
     transactionPayment: "PAYMENT",
@@ -105,10 +125,17 @@ export const translations: Record<string, any> = {
     creditCardNo: "信用卡号",
     recentTransactions: "最近交易",
     upTo50Last7Days: "最多50笔（仅最近7天）",
+    viewAll: "查看全部",
+    past3Days: "过去3天",
+    received: "已收款",
+    sent: "已付款",
+    noRecentTransactions: "暂无最近交易",
     transfer: "转账",
     payment: "付款",
     from: "来自",
+    to: "至",
     selectAccount: "选择账户",
+    noTransactions: "此期间没有交易",
     noAccountsFound: "未找到账户。请联系支持。",
     home: "首页",
     payAndTransfer: "支付和转账",
@@ -118,9 +145,15 @@ export const translations: Record<string, any> = {
     logoutConfirm: "您确定要登出吗？",
     cancel: "取消",
     error: "错误",
+    success: "成功",
     failedLogout: "登出失败",
     unexpectedError: "发生意外错误",
     ok: "确定",
+    cobi: "Cobi",
+    recordingError: "录音错误",
+    recordingInProgress: "录音正在进行中。请稍候。",
+    tooShort: "太短了—请按住更长时间。",
+    noSpeechDetected: "（未检测到语音）",
     
     // Camera/QR Scanner
     permission: "权限",
@@ -132,6 +165,7 @@ export const translations: Record<string, any> = {
     // Payment Request
     paymentRequest: "付款请求",
     paymentRequestMessage: "您要向 {accountNo} 支付 {amount} 新元吗？",
+    paymentSuccessMessage: "已向发送者支付 {amount} 新元。",
     pay: "支付",
     
     // Link Account
@@ -175,6 +209,12 @@ export const translations: Record<string, any> = {
     salaryDeposit: "工资存款",
     supermarketPurchase: "超市购物",
     
+    // Transaction messages
+    paymentRequestFrom: "来自 {name} 的付款请求",
+    paymentRequestAccepted: "付款请求已接受",
+    transferFrom: "来自 {name} 的转账",
+    transferTo: "转账至 {name}",
+    
     // Transaction types
     transactionTransfer: "转账",
     transactionPayment: "付款",
@@ -196,10 +236,17 @@ export const translations: Record<string, any> = {
     creditCardNo: "No. kad kredit",
     recentTransactions: "Transaksi Terkini",
     upTo50Last7Days: "Sehingga 50 (7 hari terakhir sahaja)",
+    viewAll: "Lihat Semua",
+    past3Days: "3 hari lepas",
+    received: "DITERIMA",
+    sent: "DIHANTAR",
+    noRecentTransactions: "Tiada transaksi terkini",
     transfer: "PINDAHAN",
     payment: "PEMBAYARAN",
     from: "Dari",
+    to: "Kepada",
     selectAccount: "Pilih Akaun",
+    noTransactions: "Tiada transaksi untuk tempoh ini",
     noAccountsFound: "Tiada akaun dijumpai. Sila hubungi sokongan.",
     home: "Rumah",
     payAndTransfer: "Bayar & Pindah",
@@ -209,9 +256,15 @@ export const translations: Record<string, any> = {
     logoutConfirm: "Adakah anda pasti mahu log keluar?",
     cancel: "Batal",
     error: "Ralat",
+    success: "Berjaya",
     failedLogout: "Gagal log keluar",
     unexpectedError: "Ralat yang tidak dijangka berlaku",
     ok: "OK",
+    cobi: "Cobi",
+    recordingError: "Ralat rakaman",
+    recordingInProgress: "Rakaman sedang dijalankan. Sila tunggu.",
+    tooShort: "Terlalu pendek—tahan lebih lama.",
+    noSpeechDetected: "(Tiada pertuturan dikesan)",
     
     // Camera/QR Scanner
     permission: "Kebenaran",
@@ -223,6 +276,7 @@ export const translations: Record<string, any> = {
     // Payment Request
     paymentRequest: "Permintaan Bayaran",
     paymentRequestMessage: "Adakah anda mahu membayar SGD {amount} kepada {accountNo}?",
+    paymentSuccessMessage: "Telah membayar SGD {amount} kepada pengirim.",
     pay: "Bayar",
     
     // Link Account
@@ -266,6 +320,12 @@ export const translations: Record<string, any> = {
     salaryDeposit: "Deposit Gaji",
     supermarketPurchase: "Pembelian Pasar Raya",
     
+    // Transaction messages
+    paymentRequestFrom: "Permintaan Bayaran dari {name}",
+    paymentRequestAccepted: "Permintaan Bayaran Diterima",
+    transferFrom: "Pindahan dari {name}",
+    transferTo: "Pindahan ke {name}",
+    
     // Transaction types
     transactionTransfer: "PINDAHAN",
     transactionPayment: "PEMBAYARAN",
@@ -287,10 +347,17 @@ export const translations: Record<string, any> = {
     creditCardNo: "கடன் அட்டை எண்",
     recentTransactions: "சமீபத்திய பரிவர்த்தனைகள்",
     upTo50Last7Days: "50 வரை (கடந்த 7 நாட்கள் மட்டும்)",
+    viewAll: "அனைத்தையும் பார்",
+    past3Days: "கடந்த 3 நாட்கள்",
+    received: "பெறப்பட்டது",
+    sent: "அனுப்பப்பட்டது",
+    noRecentTransactions: "சமீபத்திய பரிவர்த்தனைகள் இல்லை",
     transfer: "பரிமாற்றம்",
     payment: "கட்டணம்",
     from: "இருந்து",
+    to: "வரை",
     selectAccount: "கணக்கைத் தேர்ந்தெடுக்கவும்",
+    noTransactions: "இந்த காலத்திற்கான பரிவர்த்தனைகள் இல்லை",
     noAccountsFound: "கணக்குகள் எதுவும் இல்லை. ஆதரவைத் தொடர்பு கொள்ளவும்.",
     home: "முகப்பு",
     payAndTransfer: "செலுத்து மற்றும் மாற்று",
@@ -300,9 +367,15 @@ export const translations: Record<string, any> = {
     logoutConfirm: "நீங்கள் வெளியேற விரும்புகிறீர்களா?",
     cancel: "ரத்து",
     error: "பிழை",
+    success: "வெற்றி",
     failedLogout: "வெளியேற தவறியது",
     unexpectedError: "எதிர்பாராத பிழை ஏற்பட்டது",
     ok: "சரி",
+    cobi: "Cobi",
+    recordingError: "பதிவு பிழை",
+    recordingInProgress: "பதிவு ஏற்கனவே நடந்து கொண்டிருக்கிறது. காத்திருக்கவும்.",
+    tooShort: "மிகவும் சிறிது—நீண்ட நேரம் பிடிக்கவும்.",
+    noSpeechDetected: "(ஏனும் பேச்சு கண்டறியவில்லை)",
     
     // Camera/QR Scanner
     permission: "அனுமதி",
@@ -357,6 +430,12 @@ export const translations: Record<string, any> = {
     salaryDeposit: "சம்பள வைப்பு",
     supermarketPurchase: "சூப்பர்மார்க்கெட் கொள்முதல்",
     
+    // Transaction messages
+    paymentRequestFrom: "{name} இலிருந்து கட்டண கோரிக்கை",
+    paymentRequestAccepted: "கட்டண கோரிக்கை ஏற்றுக்கொள்ளப்பட்டது",
+    transferFrom: "{name} இலிருந்து பரிமாற்றம்",
+    transferTo: "{name} க்கு பரிமாற்றம்",
+    
     // Transaction types
     transactionTransfer: "பரிமாற்றம்",
     transactionPayment: "கட்டணம்",
@@ -378,10 +457,17 @@ export const translations: Record<string, any> = {
     creditCardNo: "क्रेडिट कार्ड नंबर",
     recentTransactions: "हाल के लेनदेन",
     upTo50Last7Days: "50 तक (केवल पिछले 7 दिन)",
+    viewAll: "सभी देखें",
+    past3Days: "पिछले 3 दिन",
+    received: "प्राप्त",
+    sent: "भेजा गया",
+    noRecentTransactions: "कोई हालिया लेनदेन नहीं",
     transfer: "स्थानांतरण",
     payment: "भुगतान",
     from: "से",
+    to: "को",
     selectAccount: "खाता चुनें",
+    noTransactions: "इस अवधि के लिए कोई लेनदेन नहीं",
     noAccountsFound: "कोई खाता नहीं मिला। कृपया सहायता से संपर्क करें।",
     home: "होम",
     payAndTransfer: "भुगतान और स्थानांतरण",
@@ -391,9 +477,15 @@ export const translations: Record<string, any> = {
     logoutConfirm: "क्या आप वाकई लॉगआउट करना चाहते हैं?",
     cancel: "रद्द करें",
     error: "त्रुटि",
+    success: "सफलता",
     failedLogout: "लॉगआउट विफल",
     unexpectedError: "अप्रत्याशित त्रुटि हुई",
     ok: "ठीक है",
+    cobi: "Cobi",
+    recordingError: "रिकॉर्डिंग त्रुटि",
+    recordingInProgress: "रिकॉर्डिंग पहले से चल रही है। कृपया प्रतीक्षा करें।",
+    tooShort: "बहुत छोटा—अधिक समय तक दबाई रखें।",
+    noSpeechDetected: "(कोई बोली नहीं मिली)",
     
     // Camera/QR Scanner
     permission: "अनुमति",
@@ -405,6 +497,7 @@ export const translations: Record<string, any> = {
     // Payment Request
     paymentRequest: "भुगतान अनुरोध",
     paymentRequestMessage: "क्या आप {accountNo} को SGD {amount} भुगतान करना चाहते हैं?",
+    paymentSuccessMessage: "प्रेषक को SGD {amount} का भुगतान किया गया।",
     pay: "भुगतान करें",
     
     // Link Account
@@ -469,10 +562,17 @@ export const translations: Record<string, any> = {
     creditCardNo: "クレジットカード番号",
     recentTransactions: "最近の取引",
     upTo50Last7Days: "最大50件（過去7日間のみ）",
+    viewAll: "すべて見る",
+    past3Days: "過去3日間",
+    received: "受信",
+    sent: "送信",
+    noRecentTransactions: "最近の取引はありません",
     transfer: "送金",
     payment: "支払い",
     from: "から",
+    to: "へ",
     selectAccount: "アカウントを選択",
+    noTransactions: "この期間の取引はありません",
     noAccountsFound: "アカウントが見つかりません。サポートにお問い合わせください。",
     home: "ホーム",
     payAndTransfer: "支払いと送金",
@@ -482,9 +582,14 @@ export const translations: Record<string, any> = {
     logoutConfirm: "ログアウトしてもよろしいですか？",
     cancel: "キャンセル",
     error: "エラー",
+    success: "成功",
     failedLogout: "ログアウトに失敗しました",
     unexpectedError: "予期しないエラーが発生しました",
     ok: "OK",
+    cobi: "Cobi",
+    recordingError: "Aufnahmefehler",
+    tooShort: "Zu kurz—länger halten.",
+    noSpeechDetected: "(Keine Sprache erkannt)",
     
     // Camera/QR Scanner
     permission: "権限",
@@ -496,6 +601,7 @@ export const translations: Record<string, any> = {
     // Payment Request
     paymentRequest: "支払いリクエスト",
     paymentRequestMessage: "{accountNo}にSGD {amount}を支払いますか？",
+    paymentSuccessMessage: "送信者にSGD {amount}を支払いました。",
     pay: "支払う",
     
     // Link Account
@@ -539,6 +645,12 @@ export const translations: Record<string, any> = {
     salaryDeposit: "給与入金",
     supermarketPurchase: "スーパーマーケット購入",
     
+    // Transaction messages
+    paymentRequestFrom: "{name}からの支払いリクエスト",
+    paymentRequestAccepted: "支払いリクエストが承認されました",
+    transferFrom: "{name}からの送金",
+    transferTo: "{name}への送金",
+    
     // Transaction types
     transactionTransfer: "送金",
     transactionPayment: "支払い",
@@ -560,10 +672,17 @@ export const translations: Record<string, any> = {
     creditCardNo: "신용 카드 번호",
     recentTransactions: "최근 거래",
     upTo50Last7Days: "최대 50건 (최근 7일만)",
+    viewAll: "전체 보기",
+    past3Days: "최근 3일",
+    received: "받음",
+    sent: "보냄",
+    noRecentTransactions: "최근 거래 내역이 없습니다",
     transfer: "송금",
     payment: "결제",
     from: "보낸이",
+    to: "받는이",
     selectAccount: "계정 선택",
+    noTransactions: "이 기간 동안 거래가 없습니다",
     noAccountsFound: "계정을 찾을 수 없습니다. 고객지원에 문의하세요.",
     home: "홈",
     payAndTransfer: "결제 및 송금",
@@ -573,9 +692,15 @@ export const translations: Record<string, any> = {
     logoutConfirm: "로그아웃하시겠습니까?",
     cancel: "취소",
     error: "오류",
+    success: "성공",
     failedLogout: "로그아웃 실패",
     unexpectedError: "예기치 않은 오류가 발생했습니다",
     ok: "확인",
+    cobi: "Cobi",
+    recordingError: "녹음 오류",
+    recordingInProgress: "녹음이 이미 진행 중입니다. 잠시 기다려 주세요.",
+    tooShort: "너무 짧습니다—더 길게 누르세요.",
+    noSpeechDetected: "(음성이 감지되지 않았습니다)",
     
     // Camera/QR Scanner
     permission: "권한",
@@ -587,6 +712,7 @@ export const translations: Record<string, any> = {
     // Payment Request
     paymentRequest: "결제 요청",
     paymentRequestMessage: "{accountNo}에 SGD {amount}를 결제하시겠습니까?",
+    paymentSuccessMessage: "보낸 사람에게 SGD {amount}를 결제했습니다.",
     pay: "결제",
     
     // Link Account
@@ -630,6 +756,12 @@ export const translations: Record<string, any> = {
     salaryDeposit: "급여 입금",
     supermarketPurchase: "슈퍼마켓 구매",
     
+    // Transaction messages
+    paymentRequestFrom: "{name}로부터 결제 요청",
+    paymentRequestAccepted: "결제 요청 수락됨",
+    transferFrom: "{name}로부터 송금",
+    transferTo: "{name}에게 송금",
+    
     // Transaction types
     transactionTransfer: "송금",
     transactionPayment: "결제",
@@ -651,10 +783,17 @@ export const translations: Record<string, any> = {
     creditCardNo: "Núm. de tarjeta de crédito",
     recentTransactions: "Transacciones recientes",
     upTo50Last7Days: "Hasta 50 (solo últimos 7 días)",
+    viewAll: "Ver todo",
+    past3Days: "Últimos 3 días",
+    received: "RECIBIDO",
+    sent: "ENVIADO",
+    noRecentTransactions: "No hay transacciones recientes",
     transfer: "TRANSFERENCIA",
     payment: "PAGO",
     from: "De",
+    to: "A",
     selectAccount: "Seleccionar cuenta",
+    noTransactions: "No hay transacciones para este periodo",
     noAccountsFound: "No se encontraron cuentas. Contacte con soporte.",
     home: "Inicio",
     payAndTransfer: "Pagar y transferir",
@@ -664,9 +803,15 @@ export const translations: Record<string, any> = {
     logoutConfirm: "¿Está seguro de que desea cerrar sesión?",
     cancel: "Cancelar",
     error: "Error",
+    success: "Éxito",
     failedLogout: "Error al cerrar sesión",
     unexpectedError: "Ocurrió un error inesperado",
     ok: "Aceptar",
+    cobi: "Cobi",
+    recordingError: "Error de grabación",
+    recordingInProgress: "Ya hay una grabación en curso. Por favor, espera.",
+    tooShort: "Demasiado corto—mantén presionado más tiempo.",
+    noSpeechDetected: "(No se detectó voz)",
     
     // Camera/QR Scanner
     permission: "Permiso",
@@ -678,6 +823,7 @@ export const translations: Record<string, any> = {
     // Payment Request
     paymentRequest: "Solicitud de pago",
     paymentRequestMessage: "¿Desea pagar SGD {amount} a {accountNo}?",
+    paymentSuccessMessage: "Se pagó SGD {amount} al remitente.",
     pay: "Pagar",
     
     // Link Account
@@ -721,6 +867,12 @@ export const translations: Record<string, any> = {
     salaryDeposit: "Depósito de salario",
     supermarketPurchase: "Compra en supermercado",
     
+    // Transaction messages
+    paymentRequestFrom: "Solicitud de pago de {name}",
+    paymentRequestAccepted: "Solicitud de pago aceptada",
+    transferFrom: "Transferencia de {name}",
+    transferTo: "Transferencia a {name}",
+    
     // Transaction types
     transactionTransfer: "TRANSFERENCIA",
     transactionPayment: "PAGO",
@@ -742,10 +894,17 @@ export const translations: Record<string, any> = {
     creditCardNo: "N° de carte de crédit",
     recentTransactions: "Transactions récentes",
     upTo50Last7Days: "Jusqu'à 50 (7 derniers jours seulement)",
+    viewAll: "Tout voir",
+    past3Days: "3 derniers jours",
+    received: "REÇU",
+    sent: "ENVOYÉ",
+    noRecentTransactions: "Aucune transaction récente",
     transfer: "VIREMENT",
     payment: "PAIEMENT",
     from: "De",
+    to: "À",
     selectAccount: "Sélectionner un compte",
+    noTransactions: "Aucune transaction pour cette période",
     noAccountsFound: "Aucun compte trouvé. Veuillez contacter le support.",
     home: "Accueil",
     payAndTransfer: "Payer et transférer",
@@ -755,9 +914,15 @@ export const translations: Record<string, any> = {
     logoutConfirm: "Êtes-vous sûr de vouloir vous déconnecter?",
     cancel: "Annuler",
     error: "Erreur",
+    success: "Succès",
     failedLogout: "Échec de la déconnexion",
     unexpectedError: "Une erreur inattendue s'est produite",
     ok: "OK",
+    cobi: "Cobi",
+    recordingError: "Erreur d'enregistrement",
+    recordingInProgress: "Un enregistrement est déjà en cours. Veuillez patienter.",
+    tooShort: "Trop court—maintenez plus longtemps.",
+    noSpeechDetected: "(Aucune parole détectée)",
     
     // Camera/QR Scanner
     permission: "Autorisation",
@@ -769,6 +934,7 @@ export const translations: Record<string, any> = {
     // Payment Request
     paymentRequest: "Demande de paiement",
     paymentRequestMessage: "Voulez-vous payer SGD {amount} à {accountNo}?",
+    paymentSuccessMessage: "Paiement de SGD {amount} effectué à l'expéditeur.",
     pay: "Payer",
     
     // Link Account
@@ -812,6 +978,12 @@ export const translations: Record<string, any> = {
     salaryDeposit: "Dépôt de salaire",
     supermarketPurchase: "Achat au supermarché",
     
+    // Transaction messages
+    paymentRequestFrom: "Demande de paiement de {name}",
+    paymentRequestAccepted: "Demande de paiement acceptée",
+    transferFrom: "Virement de {name}",
+    transferTo: "Virement à {name}",
+    
     // Transaction types
     transactionTransfer: "VIREMENT",
     transactionPayment: "PAIEMENT",
@@ -833,10 +1005,17 @@ export const translations: Record<string, any> = {
     creditCardNo: "Kreditkartennr.",
     recentTransactions: "Letzte Transaktionen",
     upTo50Last7Days: "Bis zu 50 (nur letzte 7 Tage)",
+    viewAll: "Alle anzeigen",
+    past3Days: "Letzte 3 Tage",
+    received: "EMPFANGEN",
+    sent: "GESENDET",
+    noRecentTransactions: "Keine aktuellen Transaktionen",
     transfer: "ÜBERWEISUNG",
     payment: "ZAHLUNG",
     from: "Von",
+    to: "An",
     selectAccount: "Konto auswählen",
+    noTransactions: "Keine Transaktionen für diesen Zeitraum",
     noAccountsFound: "Keine Konten gefunden. Bitte kontaktieren Sie den Support.",
     home: "Startseite",
     payAndTransfer: "Bezahlen und überweisen",
@@ -846,9 +1025,14 @@ export const translations: Record<string, any> = {
     logoutConfirm: "Möchten Sie sich wirklich abmelden?",
     cancel: "Abbrechen",
     error: "Fehler",
+    success: "Erfolg",
     failedLogout: "Abmeldung fehlgeschlagen",
     unexpectedError: "Ein unerwarteter Fehler ist aufgetreten",
     ok: "OK",
+    cobi: "Cobi",
+    recordingError: "Aufnahmefehler",
+    tooShort: "Zu kurz—länger halten.",
+    noSpeechDetected: "(Keine Sprache erkannt)",
     
     // Camera/QR Scanner
     permission: "Berechtigung",
@@ -860,6 +1044,7 @@ export const translations: Record<string, any> = {
     // Payment Request
     paymentRequest: "Zahlungsanfrage",
     paymentRequestMessage: "Möchten Sie SGD {amount} an {accountNo} zahlen?",
+    paymentSuccessMessage: "SGD {amount} an Absender bezahlt.",
     pay: "Bezahlen",
     
     // Link Account
@@ -903,6 +1088,12 @@ export const translations: Record<string, any> = {
     salaryDeposit: "Gehaltseinzahlung",
     supermarketPurchase: "Supermarktkauf",
     
+    // Transaction messages
+    paymentRequestFrom: "Zahlungsanfrage von {name}",
+    paymentRequestAccepted: "Zahlungsanfrage akzeptiert",
+    transferFrom: "Überweisung von {name}",
+    transferTo: "Überweisung an {name}",
+    
     // Transaction types
     transactionTransfer: "ÜBERWEISUNG",
     transactionPayment: "ZAHLUNG",
@@ -925,4 +1116,66 @@ export const getTranslationWithParams = (
     text = text.replace(`{${param}}`, params[param]);
   });
   return text;
+};
+
+// Helper function to translate transaction messages
+export const translateTransactionMessage = (
+  message: string,
+  lang: string = "en"
+): string => {
+  if (!message) return "";
+
+  // Pattern: "Request from [name]" (case-insensitive) - actual database format
+  const requestMatch = message.match(/Request from (.+)/i);
+  if (requestMatch) {
+    return getTranslationWithParams("paymentRequestFrom", lang, {
+      name: requestMatch[1],
+    });
+  }
+
+  // Pattern: "Payment Request from [name]" (case-insensitive)
+  const paymentRequestMatch = message.match(/Payment Request from (.+)/i);
+  if (paymentRequestMatch) {
+    return getTranslationWithParams("paymentRequestFrom", lang, {
+      name: paymentRequestMatch[1],
+    });
+  }
+
+  // Pattern: "Payment Request Accepted" (case-insensitive)
+  if (message.match(/Payment Request Accepted/i)) {
+    return getTranslation("paymentRequestAccepted", lang);
+  }
+
+  // Pattern: "Transfer from [name]" (case-insensitive)
+  const transferFromMatch = message.match(/Transfer from (.+)/i);
+  if (transferFromMatch) {
+    return getTranslationWithParams("transferFrom", lang, {
+      name: transferFromMatch[1],
+    });
+  }
+
+  // Pattern: "Transfer to [name]" (case-insensitive)
+  const transferToMatch = message.match(/Transfer to (.+)/i);
+  if (transferToMatch) {
+    return getTranslationWithParams("transferTo", lang, {
+      name: transferToMatch[1],
+    });
+  }
+
+  // Check if message matches any translation key (case-insensitive comparison)
+  const knownKeys = [
+    "shoppingMallPurchase",
+    "salaryDeposit",
+    "supermarketPurchase",
+  ];
+  
+  for (const key of knownKeys) {
+    const englishText = translations.en[key];
+    if (message.toLowerCase() === englishText.toLowerCase()) {
+      return getTranslation(key, lang);
+    }
+  }
+
+  // Return original message if no pattern matches
+  return message;
 };

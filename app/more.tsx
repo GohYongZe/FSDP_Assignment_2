@@ -564,6 +564,11 @@ const More = ({ navigation }: MoreProps) => {
     Alert.alert(
       translations[language.code].languageChanged,
       `${translations[language.code].languageSwitched} ${language.label}`,
+      [
+        {
+          text: translations[language.code].ok,
+        },
+      ],
     );
   };
 

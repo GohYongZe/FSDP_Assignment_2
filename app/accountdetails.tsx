@@ -17,7 +17,10 @@ import {
 } from "react-native";
 import Icon from "react-native-vector-icons/FontAwesome5";
 import { supabase } from "../lib/supabase";
-import { getTranslation } from "../lib/translations";
+import {
+  getTranslation,
+  translateTransactionMessage,
+} from "../lib/translations";
 
 // enable animation for android
 if (
@@ -25,6 +28,18 @@ if (
   UIManager.setLayoutAnimationEnabledExperimental
 ) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
+interface Transaction {
+  id: number;
+  senderaccountNo: string;
+  receiveraccountNo: string;
+  amount: string | number;
+  description: string;
+  message: string;
+  created_at: string;
+  sender_name?: string;
+  receiver_name?: string;
 }
 
 const AccountDetailsScreen = ({
@@ -35,16 +50,38 @@ const AccountDetailsScreen = ({
   const router = useRouter();
   const params = useLocalSearchParams();
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [selectedMonth, setSelectedMonth] = useState("Jan 2026");
+  const [selectedMonth, setSelectedMonth] = useState<string>("");
   const [language, setLanguage] = useState("en");
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
 
   // get account data from params
   const accountType = (params.accountType as string) || "OCBC FRANK Account";
   const balance = (params.balance as string) || "1,234.56";
   const accountNumber = (params.accountNumber as string) || "";
 
-  // available months
-  const months = ["Jan 2026", "Nov 2025", "Oct 2025"];
+  // Generate available months from transactions
+  const getAvailableMonths = (): string[] => {
+    if (transactions.length === 0) return [];
+
+    const monthSet = new Set<string>();
+    transactions.forEach((tx) => {
+      const txDate = new Date(tx.created_at);
+      const month = txDate.toLocaleString("en-US", { month: "short" });
+      const year = txDate.getFullYear();
+      monthSet.add(`${month} ${year}`);
+    });
+
+    // Convert to array and sort by date (most recent first)
+    return Array.from(monthSet).sort((a, b) => {
+      const [monthA, yearA] = a.split(" ");
+      const [monthB, yearB] = b.split(" ");
+      const dateA = new Date(`${monthA} 1, ${yearA}`);
+      const dateB = new Date(`${monthB} 1, ${yearB}`);
+      return dateB.getTime() - dateA.getTime();
+    });
+  };
+
+  const months = getAvailableMonths();
 
   // translate month names
   const translateMonth = (monthYear: string) => {
@@ -65,9 +102,81 @@ const AccountDetailsScreen = ({
     }
   };
 
+  // Fetch transactions from database
+  const fetchTransactions = async () => {
+    if (!accountNumber) return;
+
+    try {
+      const { data, error } = await supabase
+        .from("TransactionsHistory")
+        .select("*")
+        .or(
+          `senderaccountNo.eq.${accountNumber},receiveraccountNo.eq.${accountNumber}`,
+        )
+        .order("created_at", { ascending: false })
+        .limit(50);
+
+      if (error) {
+        console.error("Error fetching transactions:", error);
+      } else {
+        setTransactions(data || []);
+      }
+    } catch (err) {
+      console.error("Error:", err);
+    }
+  };
+
   useEffect(() => {
     loadLanguage();
-  }, []);
+    fetchTransactions();
+  }, [accountNumber]);
+
+  // Set initial selected month when transactions are loaded
+  useEffect(() => {
+    if (transactions.length > 0 && !selectedMonth) {
+      const availableMonths = getAvailableMonths();
+      if (availableMonths.length > 0) {
+        setSelectedMonth(availableMonths[0]);
+      }
+    }
+  }, [transactions]);
+
+  // Listen for new transactions
+  useEffect(() => {
+    if (!accountNumber) return;
+
+    const txChannel = supabase
+      .channel(`account_details_${accountNumber}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "TransactionsHistory",
+          filter: `receiveraccountNo=eq.${accountNumber}`,
+        },
+        () => {
+          fetchTransactions();
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "TransactionsHistory",
+          filter: `senderaccountNo=eq.${accountNumber}`,
+        },
+        () => {
+          fetchTransactions();
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(txChannel);
+    };
+  }, [accountNumber]);
 
   const toggleAdvanced = () => {
     // This creates a smooth slide-down effect when the button is pressed
@@ -92,6 +201,7 @@ const AccountDetailsScreen = ({
               Alert.alert(
                 getTranslation("error", language),
                 getTranslation("failedLogout", language),
+                [{ text: getTranslation("ok", language) }],
               );
             }
           },
@@ -180,64 +290,81 @@ const AccountDetailsScreen = ({
           ))}
         </ScrollView>
 
-        {/* Transaction List - Conditional Rendering Based on Selected Month */}
-        {selectedMonth === "Jan 2026" && (
-          <View style={styles.transactionList}>
-            <View style={styles.transactionItem}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.transDate}>28 Jan</Text>
-                <Text style={styles.transName}>
-                  {getTranslation("transfer", language).toUpperCase()}
-                </Text>
-                <Text style={styles.transDetails}>
-                  {getTranslation("from", language)} John Doe
-                </Text>
-              </View>
-              <Text style={[styles.amount, styles.deposit]}>+150.00</Text>
-            </View>
+        {/* Transaction List - Dynamic Rendering Based on Selected Month */}
+        <View style={styles.transactionList}>
+          {transactions
+            .filter((tx) => {
+              const txDate = new Date(tx.created_at);
+              const [monthName, year] = selectedMonth.split(" ");
+              const monthIndex = months.indexOf(selectedMonth);
+              if (monthIndex === -1) return false;
 
-            <View style={styles.transactionItem}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.transDate}>27 Jan</Text>
-                <Text style={styles.transName}>
-                  {getTranslation("payment", language).toUpperCase()}
-                </Text>
-                <Text style={styles.transDetails}>
-                  {getTranslation("shoppingMallPurchase", language)}
-                </Text>
-              </View>
-              <Text style={[styles.amount, styles.expense]}>-45.50</Text>
-            </View>
-          </View>
-        )}
+              const txMonth = txDate.toLocaleString("en-US", {
+                month: "short",
+              });
+              const txYear = txDate.getFullYear().toString();
 
-        {selectedMonth === "Nov 2025" && (
-          <View style={styles.transactionList}>
-            <View style={styles.transactionItem}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.transDate}>01 Nov</Text>
-                <Text style={styles.transName}>
-                  {getTranslation("supermarketPurchase", language)}
-                </Text>
-              </View>
-              <Text style={[styles.amount, styles.expense]}>-85.50</Text>
-            </View>
-          </View>
-        )}
+              return txMonth === monthName && txYear === year;
+            })
+            .map((tx) => {
+              const isReceived = tx.receiveraccountNo === accountNumber;
+              const amount = parseFloat(tx.amount.toString());
+              const date = new Date(tx.created_at).toLocaleDateString("en-GB", {
+                day: "numeric",
+                month: "short",
+              });
 
-        {selectedMonth === "Oct 2025" && (
-          <View style={styles.transactionList}>
+              return (
+                <View key={tx.id} style={styles.transactionItem}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.transDate}>{date}</Text>
+                    <Text style={styles.transName}>
+                      {isReceived
+                        ? getTranslation("received", language)
+                        : getTranslation("sent", language)}
+                    </Text>
+                    <Text style={styles.transDetails}>
+                      {(() => {
+                        const translated = translateTransactionMessage(
+                          tx.message,
+                          language,
+                        );
+                        return (
+                          translated ||
+                          (isReceived
+                            ? `${getTranslation("from", language)} ${tx.senderaccountNo}`
+                            : `${getTranslation("to", language)} ${tx.receiveraccountNo}`)
+                        );
+                      })()}
+                    </Text>
+                  </View>
+                  <Text
+                    style={[
+                      styles.amount,
+                      isReceived ? styles.deposit : styles.expense,
+                    ]}
+                  >
+                    {isReceived ? "+" : "-"}
+                    {amount.toFixed(2)}
+                  </Text>
+                </View>
+              );
+            })}
+          {transactions.filter((tx) => {
+            const txDate = new Date(tx.created_at);
+            const [monthName, year] = selectedMonth.split(" ");
+            const txMonth = txDate.toLocaleString("en-US", { month: "short" });
+            const txYear = txDate.getFullYear().toString();
+            return txMonth === monthName && txYear === year;
+          }).length === 0 && (
             <View style={styles.transactionItem}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.transDate}>30 Oct</Text>
-                <Text style={styles.transName}>
-                  {getTranslation("salaryDeposit", language)}
-                </Text>
-              </View>
-              <Text style={[styles.amount, styles.deposit]}>+4,500.00</Text>
+              <Text style={styles.transDetails}>
+                {getTranslation("noTransactions", language) ||
+                  "No transactions for this period"}
+              </Text>
             </View>
-          </View>
-        )}
+          )}
+        </View>
 
         {/* Toggle Button */}
         <TouchableOpacity style={styles.toggleButton} onPress={toggleAdvanced}>

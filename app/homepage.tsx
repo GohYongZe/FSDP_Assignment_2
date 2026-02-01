@@ -17,7 +17,11 @@ import {
   View,
 } from "react-native";
 import { supabase } from "../lib/supabase";
-import { getTranslation, getTranslationWithParams } from "../lib/translations";
+import {
+  getTranslation,
+  getTranslationWithParams,
+  translateTransactionMessage,
+} from "../lib/translations";
 
 interface Account {
   id: string;
@@ -36,6 +40,8 @@ interface Transaction {
   amount: number;
   message: string;
   created_at: string;
+  sender_name?: string;
+  receiver_name?: string;
 }
 
 type CobiAction =
@@ -446,7 +452,11 @@ export default function HomePage() {
 
       const perm = await Audio.requestPermissionsAsync();
       if (!perm.granted) {
-        Alert.alert("Permission needed", "Please allow microphone access.");
+        Alert.alert(
+          getTranslation("permission", language),
+          "Please allow microphone access.",
+          [{ text: getTranslation("ok", language) }],
+        );
         setIsCobiListening(false);
         return;
       }
@@ -466,7 +476,18 @@ export default function HomePage() {
       recordingRef.current = rec;
     } catch (e: any) {
       console.error(e);
-      Alert.alert("Cobi", `Recording error: ${String(e?.message ?? e)}`);
+      const errorMessage = String(e?.message ?? e);
+      const isRecordingInProgress =
+        errorMessage.toLowerCase().includes("recording object") ||
+        errorMessage.toLowerCase().includes("already prepared");
+
+      Alert.alert(
+        getTranslation("cobi", language),
+        isRecordingInProgress
+          ? getTranslation("recordingInProgress", language)
+          : `${getTranslation("recordingError", language)}: ${errorMessage}`,
+        [{ text: getTranslation("ok", language) }],
+      );
       setIsCobiListening(false);
     }
   };
@@ -488,19 +509,19 @@ export default function HomePage() {
 
       if (!uri) throw new Error("No recording URI");
       if (durMs < 600) {
-        setSpokenText("Too short—hold longer.");
+        setSpokenText(getTranslation("tooShort", language));
         return;
       }
 
       const transcript = await transcribeWithOpenAI(uri);
-      setSpokenText(transcript || "(No speech detected)");
+      setSpokenText(transcript || getTranslation("noSpeechDetected", language));
 
       if (!transcript?.trim()) return;
 
       // 1) Add user's new message into local history
       const nextHistory: CobiMsg[] = [
         ...cobiHistory,
-        { role: "user", content: transcript.trim() },
+        { role: "user" as const, content: transcript.trim() },
       ].slice(-COBI_HISTORY_LIMIT);
 
       // 2) Call server with full messages so it remembers clarifications
@@ -509,7 +530,7 @@ export default function HomePage() {
       // 3) Add assistant reply into history
       const updatedHistory: CobiMsg[] = [
         ...nextHistory,
-        { role: "assistant", content: (result?.reply ?? "").trim() },
+        { role: "assistant" as const, content: (result?.reply ?? "").trim() },
       ]
         .filter((m) => m.content.trim().length > 0)
         .slice(-COBI_HISTORY_LIMIT);
@@ -529,7 +550,9 @@ export default function HomePage() {
       }
     } catch (e: any) {
       console.error(e);
-      Alert.alert("Cobi", String(e?.message ?? e));
+      Alert.alert("Cobi", String(e?.message ?? e), [
+        { text: getTranslation("ok", language) },
+      ]);
     } finally {
       setCobiBusy(false);
     }
@@ -604,7 +627,9 @@ export default function HomePage() {
         sender_account_no: selectedAccount.accountNumber,
         receiver_account_no: pendingRequest.sender_account_no,
         amount: pendingRequest.amount,
-        description: pendingRequest.description || `Payment Request Accepted`,
+        description:
+          pendingRequest.description ||
+          getTranslation("paymentRequestAccepted", language),
       });
 
       if (error) throw error;
@@ -615,14 +640,22 @@ export default function HomePage() {
         .update({ status: "accepted" })
         .eq("id", pendingRequest.id);
 
-      Alert.alert("Success", `Paid SGD ${pendingRequest.amount} to sender.`);
+      Alert.alert(
+        getTranslation("success", language),
+        getTranslationWithParams("paymentSuccessMessage", language, {
+          amount: pendingRequest.amount,
+        }),
+        [{ text: getTranslation("ok", language) }],
+      );
       setShowRequestModal(false);
       setPendingRequest(null);
       fetchUserData();
       if (selectedAccount?.accountNumber)
         fetchTransactions(selectedAccount.accountNumber);
     } catch (e: any) {
-      Alert.alert("Error", e.message);
+      Alert.alert(getTranslation("error", language), e.message, [
+        { text: getTranslation("ok", language) },
+      ]);
     }
   };
 
@@ -859,7 +892,7 @@ export default function HomePage() {
                 }`}
               >
                 {isHidden
-                  ? "••••••"
+                  ? "•••••••• SGD"
                   : `${selectedAccount?.balance?.toFixed(2) || "0.00"} SGD`}
               </Text>
             </View>
@@ -911,11 +944,13 @@ export default function HomePage() {
                 }
               >
                 <Text className="text-sm font-semibold text-red-600">
-                  View All
+                  {getTranslation("viewAll", language)}
                 </Text>
               </TouchableOpacity>
             </View>
-            <Text className="text-sm text-gray-500 mb-3">Past 3 days</Text>
+            <Text className="text-sm text-gray-500 mb-3">
+              {getTranslation("past3Days", language)}
+            </Text>
 
             {transactions.length > 0 ? (
               transactions.map((tx) => {
@@ -941,13 +976,30 @@ export default function HomePage() {
                           {date}
                         </Text>
                         <Text className="text-sm font-bold text-gray-800 mb-1">
-                          {isReceived ? "RECEIVED" : "SENT"}
+                          {isReceived
+                            ? getTranslation("received", language)
+                            : getTranslation("sent", language)}
                         </Text>
                         <Text className="text-sm text-gray-600">
-                          {tx.message ||
-                            (isReceived
-                              ? `From ${tx.senderaccountNo}`
-                              : `To ${tx.receiveraccountNo}`)}
+                          {(() => {
+                            const translated = translateTransactionMessage(
+                              tx.message,
+                              language,
+                            );
+                            // Debug: log original message and translation
+                            console.log(
+                              "Transaction message:",
+                              tx.message,
+                              "-> Translated:",
+                              translated,
+                            );
+                            return (
+                              translated ||
+                              (isReceived
+                                ? `${getTranslation("from", language)} ${tx.senderaccountNo}`
+                                : `${getTranslation("to", language)} ${tx.receiveraccountNo}`)
+                            );
+                          })()}
                         </Text>
                       </View>
                       <Text
@@ -965,7 +1017,7 @@ export default function HomePage() {
             ) : (
               <View className="p-4 rounded-lg border border-gray-200 bg-white items-center">
                 <Text className="text-gray-500 italic">
-                  No recent transactions
+                  {getTranslation("noRecentTransactions", language)}
                 </Text>
               </View>
             )}
