@@ -1,6 +1,6 @@
 import { FontAwesome5, FontAwesome6 } from "@expo/vector-icons";
 import { Link, useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef  } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -11,6 +11,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  LayoutRectangle,
 } from "react-native";
 import { supabase } from "../lib/supabase";
 import { useTutorial } from "./components/TutorialContext";
@@ -480,29 +481,27 @@ export default function HomePage() {
       {/* Bottom Navigation */}
       <View style={styles.bottomNav}>
         <TouchableOpacity
-          style={styles.navItem}
+          style={[styles.navItem, styles.navItemActive]}
           onPress={() => router.push("/homepage")}
         >
-          <FontAwesome5 name="home" size={22} color="#888" />
-          <Text style={styles.navText}>Home</Text>
+          <FontAwesome5 name="home" size={22} color="#da291c" />
+          <Text style={[styles.navItemText, styles.navItemTextActive]}>
+            Home
+          </Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.navItem}
           onPress={() => router.push("/TransferScreen")}
         >
-          <FontAwesome5 name="exchange-alt" size={22} color="#da291c" />
-          <Text
-            style={[styles.navText, { color: "#da291c", fontWeight: "600" }]}
-          >
-            Pay & Transfer
-          </Text>
+          <FontAwesome5 name="exchange-alt" size={22} color="#888" />
+          <Text style={styles.navItemText}>Pay & Transfer</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.navItem}
           onPress={() => router.push("/more")}
         >
           <FontAwesome5 name="th-large" size={22} color="#888" />
-          <Text style={styles.navText}>More</Text>
+          <Text style={styles.navItemText}>More</Text>
         </TouchableOpacity>
       </View>
     </View>

@@ -156,7 +156,7 @@ const AccountDetailsScreen = ({
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.navItem}
-          onPress={() => router.push("/transferscreen")}
+          onPress={() => router.push("/TransferScreen")}
         >
           <Icon name="exchange-alt" size={20} color="#888" />
           <Text style={styles.navText}>Pay & Transfer</Text>
