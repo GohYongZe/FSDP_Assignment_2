@@ -151,7 +151,7 @@ const TransferScreen = ({ navigation }: { navigation: any }) => {
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.navItem}
-          onPress={() => router.push("/transferscreen")}
+          onPress={() => router.push("/TransferScreen")}
         >
           <Icon name="exchange-alt" size={20} color="#da291c" />
           <Text
