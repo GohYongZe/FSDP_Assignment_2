@@ -1,6 +1,6 @@
 import { FontAwesome5, FontAwesome6 } from "@expo/vector-icons";
 import { Link, useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -11,8 +11,10 @@ import {
   Text,
   TouchableOpacity,
   View,
+  LayoutRectangle,
 } from "react-native";
 import { supabase } from "../lib/supabase";
+import { useTutorial } from "./components/TutorialContext";
 
 interface Account {
   id: string;
@@ -26,6 +28,7 @@ interface Account {
 
 export default function HomePage() {
   const router = useRouter();
+  const { startTutorial, registerStep } = useTutorial();
 
   // State from homepage.tsx
   const [isHidden, setIsHidden] = useState(true);
@@ -39,6 +42,10 @@ export default function HomePage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
   const [showAccountModal, setShowAccountModal] = useState(false);
+
+  // Refs for tutorial elements
+  const quickActionsRef = useRef<View>(null);
+  const tabsRef = useRef<View>(null);
 
   useEffect(() => {
     fetchUserData();
@@ -240,6 +247,15 @@ export default function HomePage() {
     ]);
   };
 
+  const onLayout = (ref: React.RefObject<View>, id: string, text: string) => {
+    if (ref.current) {
+      ref.current.measure((x, y, width, height, pageX, pageY) => {
+        const layout = { x: pageX, y: pageY, width, height };
+        registerStep({ id, layout, text });
+      });
+    }
+  };
+
   if (loading) {
     return (
       <View className="flex-1 justify-center items-center bg-white">
@@ -264,6 +280,9 @@ export default function HomePage() {
               <Link href="/notifications" className="mr-4">
                 <FontAwesome6 name="bell" size={24} color="black" />
               </Link>
+              <TouchableOpacity onPress={() => startTutorial()} className="mr-4">
+                <FontAwesome6 name="question-circle" size={24} color="black" />
+              </TouchableOpacity>
               <TouchableOpacity onPress={handleLogout}>
                 <Text className="text-blue-700 font-bold">Logout</Text>
               </TouchableOpacity>
@@ -288,7 +307,10 @@ export default function HomePage() {
         </ImageBackground>
 
         {/* Quick Actions Card */}
-        <View className="bg-white mx-4 -mt-12 p-5 rounded-xl shadow-lg flex-row justify-around relative">
+        <View
+          ref={quickActionsRef}
+          onLayout={() => onLayout(quickActionsRef, 'quick-actions', 'This is the Quick Actions section. You can quickly access features like PayNow.')}
+          className="bg-white mx-4 -mt-12 p-5 rounded-xl shadow-lg flex-row justify-around relative">
           <TouchableOpacity className="absolute top-2 right-2">
             <FontAwesome6 name="gear" size={16} color="gray" />
           </TouchableOpacity>
@@ -306,7 +328,10 @@ export default function HomePage() {
         </View>
 
         {/* Account Tabs */}
-        <View className="flex-row items-center p-4">
+        <View 
+          ref={tabsRef}
+          onLayout={() => onLayout(tabsRef, 'tabs', 'These tabs let you switch between your accounts, cards, and investments.')}
+          className="flex-row items-center p-4">
           <TouchableOpacity
             onPress={() => setIsHidden(!isHidden)}
             className="mr-3"
@@ -403,7 +428,7 @@ export default function HomePage() {
               <TouchableOpacity onPress={() => setShowAccountModal(false)}>
                 <Text style={styles.modalClose}>✕</Text>
               </TouchableOpacity>
-            </View>
+            </V>
             <ScrollView style={styles.accountList}>
               {accounts.length > 0 ? (
                 accounts.map((account) => (
