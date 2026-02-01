@@ -9,5 +9,5 @@ export const TUTORIAL_CONFIG = {
     'tutorial-paynow-action': 'Use this to initiate a transfer using just a mobile number, NRIC, or UEN.',
     'tutorial-recent-recipients': 'Quickly select from a list of your most recent recipients to start a transfer.',
   },
-  // Add other pages and their tutorial steps here in the future
+
 };

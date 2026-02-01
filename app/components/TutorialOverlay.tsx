@@ -17,6 +17,8 @@ const TutorialOverlay: React.FC<TutorialOverlayProps> = ({ steps }) => {
     <View style={styles.overlay}>
       <TouchableOpacity style={StyleSheet.absoluteFill} onPress={stopTutorial} />
 
+      <Text style={styles.instructionText}>Click on the highlighted part to continue</Text>
+
       {steps.map((step) => (
         <TouchableOpacity
           key={step.id}
@@ -57,6 +59,17 @@ const styles = StyleSheet.create({
     borderColor: '#fff',
     borderWidth: 2,
     borderRadius: 8,
+  },
+  instructionText: {
+    position: 'absolute',
+    top: 80,
+    alignSelf: 'center',
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    padding: 10,
+    borderRadius: 10,
   },
   modalOverlay: {
     flex: 1,
