@@ -837,7 +837,7 @@ const More = ({ navigation }: MoreProps) => {
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.navItem}
-            onPress={() => router.push("/transferscreen")}
+            onPress={() => router.push("/TransferScreen")}
           >
             <FontAwesome5 name="exchange-alt" size={22} color="#888" />
             <Text style={styles.navItemText}>{t.payTransfer}</Text>
