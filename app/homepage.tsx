@@ -17,6 +17,7 @@ import {
   View,
 } from "react-native";
 import { supabase } from "../lib/supabase";
+import TutorialTarget from "./components/tutorial/TutorialTarget";
 import {
   getTranslation,
   getTranslationWithParams,
@@ -709,84 +710,94 @@ export default function HomePage() {
             </Text>
 
             {accounts.length > 1 && (
-              <TouchableOpacity
-                onPress={() => setShowAccountModal(true)}
-                className="bg-white/80 px-3 py-2 rounded-lg flex-row items-center mt-2 self-start"
-              >
-                <FontAwesome6 name="user-group" size={14} color="#da291c" />
-                <Text className="ml-2 text-xs font-semibold text-gray-800">
-                  {getTranslation("switchAccount", language)} ({accounts.length}
-                  )
-                </Text>
-              </TouchableOpacity>
+              <View className="mt-2 self-start">
+                <TutorialTarget id="switch-account">
+                  <TouchableOpacity
+                    onPress={() => setShowAccountModal(true)}
+                    className="bg-white/80 px-3 py-2 rounded-lg flex-row items-center"
+                  >
+                    <FontAwesome6 name="user-group" size={14} color="#da291c" />
+                    <Text className="ml-2 text-xs font-semibold text-gray-800">
+                      {getTranslation("switchAccount", language)} ({accounts.length}
+                      )
+                    </Text>
+                  </TouchableOpacity>
+                </TutorialTarget>
+              </View>
             )}
           </View>
         </ImageBackground>
 
         {/* Quick Actions */}
-        <View className="bg-white mx-4 -mt-12 p-5 rounded-xl shadow-lg flex-row justify-around relative">
-          <View className="items-center">
-            <TouchableOpacity
-              className="bg-gray-100 p-3 rounded-full mb-1"
-              onPress={() => router.push("/paynow" as any)}
-            >
-              <FontAwesome6 name="comment-dollar" size={20} color="black" />
-            </TouchableOpacity>
-            <Text className="text-xs text-gray-600">
-              {getTranslation("payNow", language)}
-            </Text>
-          </View>
+        <View className="mx-4 -mt-12 relative">
+          <TutorialTarget id="quick-actions">
+            <View className="bg-white p-5 rounded-xl shadow-lg flex-row justify-around">
+            <View className="items-center">
+              <TouchableOpacity
+                className="bg-gray-100 p-3 rounded-full mb-1"
+                onPress={() => router.push("/paynow" as any)}
+              >
+                <FontAwesome6 name="comment-dollar" size={20} color="black" />
+              </TouchableOpacity>
+              <Text className="text-xs text-gray-600">
+                {getTranslation("payNow", language)}
+              </Text>
+            </View>
 
-          <View className="items-center">
-            <TouchableOpacity
-              className="bg-gray-100 p-3 rounded-full mb-1"
-              onPress={() => router.push("/givenow" as any)}
-            >
-              <FontAwesome6
-                name="hand-holding-dollar"
-                size={20}
-                color="black"
-              />
-            </TouchableOpacity>
-            <Text className="text-xs text-gray-600">GiveNow</Text>
-          </View>
+            <View className="items-center">
+              <TouchableOpacity
+                className="bg-gray-100 p-3 rounded-full mb-1"
+                onPress={() => router.push("/givenow" as any)}
+              >
+                <FontAwesome6
+                  name="hand-holding-dollar"
+                  size={20}
+                  color="black"
+                />
+              </TouchableOpacity>
+              <Text className="text-xs text-gray-600">GiveNow</Text>
+            </View>
 
-          <View className="items-center">
-            <TouchableOpacity
-              className="bg-gray-100 p-3 rounded-full mb-1"
-              onPress={handleStartScan}
-            >
-              <FontAwesome6 name="qrcode" size={20} color="black" />
-            </TouchableOpacity>
-            <Text className="text-xs text-gray-600">
-              {getTranslation("scan", language)}
-            </Text>
-          </View>
+            <View className="items-center">
+              <TouchableOpacity
+                className="bg-gray-100 p-3 rounded-full mb-1"
+                onPress={handleStartScan}
+              >
+                <FontAwesome6 name="qrcode" size={20} color="black" />
+              </TouchableOpacity>
+              <Text className="text-xs text-gray-600">
+                {getTranslation("scan", language)}
+              </Text>
+            </View>
 
-          <View className="h-full w-px bg-gray-300" />
+            <View className="h-full w-px bg-gray-300" />
 
-          <View className="items-center">
-            <TouchableOpacity className="bg-orange-100 p-3 rounded-full mb-1">
-              <FontAwesome6 name="gear" size={20} color="black" />
-            </TouchableOpacity>
-            <Text className="text-xs text-gray-600">
-              {getTranslation("customise", language)}
-            </Text>
+            <View className="items-center">
+              <TouchableOpacity className="bg-orange-100 p-3 rounded-full mb-1">
+                <FontAwesome6 name="gear" size={20} color="black" />
+              </TouchableOpacity>
+              <Text className="text-xs text-gray-600">
+                {getTranslation("customise", language)}
+              </Text>
+            </View>
           </View>
+        </TutorialTarget>
         </View>
 
         {/* Tabs */}
         <View className="flex-row items-center p-4">
-          <TouchableOpacity
-            onPress={() => setIsHidden(!isHidden)}
-            className="mr-3"
-          >
-            <FontAwesome6
-              name={isHidden ? "eye-slash" : "eye"}
-              size={20}
-              color={isHidden ? "#666" : "#da291c"}
-            />
-          </TouchableOpacity>
+          <TutorialTarget id="eye-icon">
+            <TouchableOpacity
+              onPress={() => setIsHidden(!isHidden)}
+              className="mr-3"
+            >
+              <FontAwesome6
+                name={isHidden ? "eye-slash" : "eye"}
+                size={20}
+                color={isHidden ? "#666" : "#da291c"}
+              />
+            </TouchableOpacity>
+          </TutorialTarget>
 
           <ScrollView
             horizontal
@@ -816,211 +827,215 @@ export default function HomePage() {
         </View>
 
         {/* Account card */}
-        {selectedAccount ? (
-          <TouchableOpacity
-            className="bg-[#f6ecec] mx-4 p-5 rounded-xl border border-gray-200"
-            onPress={() =>
-              router.push({
-                pathname: "/accountdetails",
-                params: {
-                  accountType:
-                    selectedAccount?.accountType ||
-                    `OCBC ${
-                      selectedAccount?.type === "foreign" ? "Foreign" : "FRANK"
-                    } Account`,
-                  balance: selectedAccount?.balance?.toFixed(2) || "0.00",
-                  accountNumber: selectedAccount?.accountNumber || "",
-                },
-              } as any)
-            }
-          >
-            <View className="flex-row justify-between items-center mb-4">
-              <View className="flex-row items-center">
-                <View className="bg-orange-300 w-10 h-10 rounded-full items-center justify-center mr-3">
-                  <Text className="text-white font-bold text-xs">
-                    {(() => {
-                      const accountType =
-                        selectedAccount?.accountType ||
-                        (selectedAccount?.type === "foreign"
-                          ? "Foreign"
-                          : "Frank");
-                      const firstWord = accountType.split(" ")[0];
-                      return firstWord.substring(0, 3).toUpperCase();
-                    })()}
-                  </Text>
-                </View>
-                <View>
-                  <Text className="text-xl font-bold text-gray-800">
-                    {selectedAccount?.accountType ||
+        <TutorialTarget id="account-card">
+          {selectedAccount ? (
+            <TouchableOpacity
+              className="bg-[#f6ecec] mx-4 p-5 rounded-xl border border-gray-200"
+              onPress={() =>
+                router.push({
+                  pathname: "/accountdetails",
+                  params: {
+                    accountType:
+                      selectedAccount?.accountType ||
                       `OCBC ${
-                        selectedAccount?.type === "foreign"
-                          ? "Foreign"
-                          : "FRANK"
-                      } Account`}
-                  </Text>
-                  <Text
-                    className={`text-base font-medium text-black-600 mt-1 ${
-                      isHidden ? "bg-black-200 text-transparent" : ""
-                    }`}
-                  >
-                    {isHidden
-                      ? "•••••••••••"
-                      : (() => {
-                          const accNo =
-                            selectedAccount?.accountNumber || "123456789";
-                          if (accNo.length >= 9) {
-                            return `${accNo.slice(0, 3)}-${accNo.slice(
-                              3,
-                              -3,
-                            )}-${accNo.slice(-3)}`;
-                          }
-                          return accNo;
-                        })()}
-                  </Text>
+                        selectedAccount?.type === "foreign" ? "Foreign" : "FRANK"
+                      } Account`,
+                    balance: selectedAccount?.balance?.toFixed(2) || "0.00",
+                    accountNumber: selectedAccount?.accountNumber || "",
+                  },
+                } as any)
+              }
+            >
+              <View className="flex-row justify-between items-center mb-4">
+                <View className="flex-row items-center">
+                  <View className="bg-orange-300 w-10 h-10 rounded-full items-center justify-center mr-3">
+                    <Text className="text-white font-bold text-xs">
+                      {(() => {
+                        const accountType =
+                          selectedAccount?.accountType ||
+                          (selectedAccount?.type === "foreign"
+                            ? "Foreign"
+                            : "Frank");
+                        const firstWord = accountType.split(" ")[0];
+                        return firstWord.substring(0, 3).toUpperCase();
+                      })()}
+                    </Text>
+                  </View>
+                  <View>
+                    <Text className="text-xl font-bold text-gray-800">
+                      {selectedAccount?.accountType ||
+                        `OCBC ${
+                          selectedAccount?.type === "foreign"
+                            ? "Foreign"
+                            : "FRANK"
+                        } Account`}
+                    </Text>
+                    <Text
+                      className={`text-base font-medium text-black-600 mt-1 ${
+                        isHidden ? "bg-black-200 text-transparent" : ""
+                      }`}
+                    >
+                      {isHidden
+                        ? "•••••••••••"
+                        : (() => {
+                            const accNo =
+                              selectedAccount?.accountNumber || "123456789";
+                            if (accNo.length >= 9) {
+                              return `${accNo.slice(0, 3)}-${accNo.slice(
+                                3,
+                                -3,
+                              )}-${accNo.slice(-3)}`;
+                            }
+                            return accNo;
+                          })()}
+                    </Text>
+                  </View>
                 </View>
+                <FontAwesome6 name="chevron-right" size={16} color="gray" />
               </View>
-              <FontAwesome6 name="chevron-right" size={16} color="gray" />
-            </View>
 
-            <View className="flex-row justify-between items-end mb-3">
-              <Text className="text-gray-700 text-base">
-                {getTranslation("availableBalance", language)}
-              </Text>
-              <Text
-                className={`text-xl font-bold ${
-                  isHidden ? "bg-black-200 text-transparent" : "text-black-800"
-                }`}
-              >
-                {isHidden
-                  ? "•••••••• SGD"
-                  : `${selectedAccount?.balance?.toFixed(2) || "0.00"} SGD`}
-              </Text>
-            </View>
+              <View className="flex-row justify-between items-end mb-3">
+                <Text className="text-gray-700 text-base">
+                  {getTranslation("availableBalance", language)}
+                </Text>
+                <Text
+                  className={`text-xl font-bold ${
+                    isHidden ? "bg-black-200 text-transparent" : "text-black-800"
+                  }`}
+                >
+                  {isHidden
+                    ? "•••••••• SGD"
+                    : `${selectedAccount?.balance?.toFixed(2) || "0.00"} SGD`}
+                </Text>
+              </View>
 
-            <View className="border-t border-gray-200 pt-3 flex-row justify-between items-center">
-              <Text className="text-gray-700 text-base">
-                {selectedAccount?.accountType?.toLowerCase().includes("credit")
-                  ? getTranslation("creditCardNo", language)
-                  : getTranslation("debitCardNo", language)}
-              </Text>
-              <Text
-                className={`text-base font-medium text-black-600 ${
-                  isHidden ? "bg-black-200 text-transparent" : ""
-                }`}
-              >
-                {isHidden
-                  ? "••••••••••••"
-                  : (() => {
-                      const accNo =
-                        selectedAccount?.accountNumber || "123456789";
-                      const formatted =
-                        accNo.match(/.{1,4}/g)?.join("-") || accNo;
-                      return formatted;
-                    })()}
+              <View className="border-t border-gray-200 pt-3 flex-row justify-between items-center">
+                <Text className="text-gray-700 text-base">
+                  {selectedAccount?.accountType?.toLowerCase().includes("credit")
+                    ? getTranslation("creditCardNo", language)
+                    : getTranslation("debitCardNo", language)}
+                </Text>
+                <Text
+                  className={`text-base font-medium text-black-600 ${
+                    isHidden ? "bg-black-200 text-transparent" : ""
+                  }`}
+                >
+                  {isHidden
+                    ? "••••••••••••"
+                    : (() => {
+                        const accNo =
+                          selectedAccount?.accountNumber || "123456789";
+                        const formatted =
+                          accNo.match(/.{1,4}/g)?.join("-") || accNo;
+                        return formatted;
+                      })()}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          ) : (
+            <View className="bg-[#f6ecec] mx-4 p-5 rounded-xl border border-gray-200">
+              <Text className="text-center text-gray-500">
+                {getTranslation("noAccountsFound", language)}
               </Text>
             </View>
-          </TouchableOpacity>
-        ) : (
-          <View className="bg-[#f6ecec] mx-4 p-5 rounded-xl border border-gray-200">
-            <Text className="text-center text-gray-500">
-              {getTranslation("noAccountsFound", language)}
-            </Text>
-          </View>
-        )}
+          )}
+        </TutorialTarget>
 
         {/* Recent Transactions */}
         {selectedAccount && (
           <View className="mx-4 mt-4 mb-32">
-            <View className="flex-row justify-between items-center mb-3 mt-3">
-              <Text className="text-xl font-bold text-gray-800">
-                {getTranslation("recentTransactions", language)}
-              </Text>
-              <TouchableOpacity
-                onPress={() =>
-                  router.push({
-                    pathname: "/transactions",
-                    params: { accountNo: selectedAccount.accountNumber },
-                  } as any)
-                }
-              >
-                <Text className="text-sm font-semibold text-red-600">
-                  {getTranslation("viewAll", language)}
+            <TutorialTarget id="recent-transactions">
+              <View className="flex-row justify-between items-center mb-3 mt-3">
+                <Text className="text-xl font-bold text-gray-800">
+                  {getTranslation("recentTransactions", language)}
                 </Text>
-              </TouchableOpacity>
-            </View>
+                <TouchableOpacity
+                  onPress={() =>
+                    router.push({
+                      pathname: "/transactions",
+                      params: { accountNo: selectedAccount.accountNumber },
+                    } as any)
+                  }
+                >
+                  <Text className="text-sm font-semibold text-red-600">
+                    {getTranslation("viewAll", language)}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </TutorialTarget>
             <Text className="text-sm text-gray-500 mb-3">
               {getTranslation("past3Days", language)}
             </Text>
 
-            {transactions.length > 0 ? (
-              transactions.map((tx) => {
-                const isReceived =
-                  tx.receiveraccountNo === selectedAccount.accountNumber;
-                const amount = parseFloat(tx.amount.toString());
-                const date = new Date(tx.created_at).toLocaleDateString(
-                  "en-GB",
-                  {
-                    day: "numeric",
-                    month: "short",
-                  },
-                );
+              {transactions.length > 0 ? (
+                transactions.map((tx) => {
+                  const isReceived =
+                    tx.receiveraccountNo === selectedAccount.accountNumber;
+                  const amount = parseFloat(tx.amount.toString());
+                  const date = new Date(tx.created_at).toLocaleDateString(
+                    "en-GB",
+                    {
+                      day: "numeric",
+                      month: "short",
+                    },
+                  );
 
-                return (
-                  <View
-                    key={tx.id}
-                    className="bg-white p-4 rounded-lg border border-gray-200 mb-2"
-                  >
-                    <View className="flex-row justify-between items-center">
-                      <View className="flex-1">
-                        <Text className="text-xs text-gray-500 mb-1">
-                          {date}
-                        </Text>
-                        <Text className="text-sm font-bold text-gray-800 mb-1">
-                          {isReceived
-                            ? getTranslation("received", language)
-                            : getTranslation("sent", language)}
-                        </Text>
-                        <Text className="text-sm text-gray-600">
-                          {(() => {
-                            const translated = translateTransactionMessage(
-                              tx.message,
-                              language,
-                            );
-                            // Debug: log original message and translation
-                            console.log(
-                              "Transaction message:",
-                              tx.message,
-                              "-> Translated:",
-                              translated,
-                            );
-                            return (
-                              translated ||
-                              (isReceived
-                                ? `${getTranslation("from", language)} ${tx.senderaccountNo}`
-                                : `${getTranslation("to", language)} ${tx.receiveraccountNo}`)
-                            );
-                          })()}
+                  return (
+                    <View
+                      key={tx.id}
+                      className="bg-white p-4 rounded-lg border border-gray-200 mb-2"
+                    >
+                      <View className="flex-row justify-between items-center">
+                        <View className="flex-1">
+                          <Text className="text-xs text-gray-500 mb-1">
+                            {date}
+                          </Text>
+                          <Text className="text-sm font-bold text-gray-800 mb-1">
+                            {isReceived
+                              ? getTranslation("received", language)
+                              : getTranslation("sent", language)}
+                          </Text>
+                          <Text className="text-sm text-gray-600">
+                            {(() => {
+                              const translated = translateTransactionMessage(
+                                tx.message,
+                                language,
+                              );
+                              // Debug: log original message and translation
+                              console.log(
+                                "Transaction message:",
+                                tx.message,
+                                "-> Translated:",
+                                translated,
+                              );
+                              return (
+                                translated ||
+                                (isReceived
+                                  ? `${getTranslation("from", language)} ${tx.senderaccountNo}`
+                                  : `${getTranslation("to", language)} ${tx.receiveraccountNo}`)
+                              );
+                            })()}
+                          </Text>
+                        </View>
+                        <Text
+                          className={`text-base font-semibold ${
+                            isReceived ? "text-green-600" : "text-black"
+                          }`}
+                        >
+                          {isReceived ? "+" : "-"}
+                          {Math.abs(amount).toFixed(2)}
                         </Text>
                       </View>
-                      <Text
-                        className={`text-base font-semibold ${
-                          isReceived ? "text-green-600" : "text-black"
-                        }`}
-                      >
-                        {isReceived ? "+" : "-"}
-                        {Math.abs(amount).toFixed(2)}
-                      </Text>
                     </View>
-                  </View>
-                );
-              })
-            ) : (
-              <View className="p-4 rounded-lg border border-gray-200 bg-white items-center">
-                <Text className="text-gray-500 italic">
-                  {getTranslation("noRecentTransactions", language)}
-                </Text>
-              </View>
-            )}
+                  );
+                })
+              ) : (
+                <View className="p-4 rounded-lg border border-gray-200 bg-white items-center">
+                  <Text className="text-gray-500 italic">
+                    {getTranslation("noRecentTransactions", language)}
+                  </Text>
+                </View>
+              )}
           </View>
         )}
       </ScrollView>

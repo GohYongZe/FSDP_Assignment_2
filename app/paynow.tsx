@@ -11,6 +11,7 @@ import {
     View,
 } from 'react-native';
 import { supabase } from '../lib/supabase';
+import TutorialTarget from './components/tutorial/TutorialTarget';
 
 interface Contact {
   id: string;
@@ -128,29 +129,33 @@ export default function PayNowScreen() {
               <Text className="text-sm font-semibold text-gray-500">
                   {searchMode === 'name' ? 'Search by Name or Mobile' : 'Search by NRIC'}
               </Text>
-              <TouchableOpacity onPress={toggleSearchMode}>
-                  <Text className="text-sm font-bold text-red-600">
-                      {searchMode === 'name' ? 'Switch to NRIC Search' : 'Switch to Name Search'}
-                  </Text>
-              </TouchableOpacity>
+              <TutorialTarget id="nric-search-button">
+                <TouchableOpacity onPress={toggleSearchMode}>
+                    <Text className="text-sm font-bold text-red-600">
+                        {searchMode === 'name' ? 'Switch to NRIC Search' : 'Switch to Name Search'}
+                    </Text>
+                </TouchableOpacity>
+              </TutorialTarget>
           </View>
           
-          <View className="flex-row items-center bg-gray-100 rounded-xl p-3">
-            <MaterialIcons name="search" size={24} color="#9ca3af" className="mr-2" />
-            <TextInput
-              className="flex-1 text-base text-gray-800"
-              placeholder={searchMode === 'name' ? "Enter Name or Mobile No" : "Enter NRIC (e.g. S1234567A)"}
-              value={searchQuery}
-              onChangeText={handleSearchTextChange}
-              autoCapitalize={searchMode === 'nric' ? "characters" : "none"}
-              autoCorrect={false}
-            />
-            {searchQuery.length > 0 && (
-              <TouchableOpacity onPress={() => handleSearchTextChange('')}>
-                <MaterialIcons name="close" size={20} color="#9ca3af" />
-              </TouchableOpacity>
-            )}
-          </View>
+          <TutorialTarget id="search-bar">
+            <View className="flex-row items-center bg-gray-100 rounded-xl p-3">
+              <MaterialIcons name="search" size={24} color="#9ca3af" className="mr-2" />
+              <TextInput
+                className="flex-1 text-base text-gray-800"
+                placeholder={searchMode === 'name' ? "Enter Name or Mobile No" : "Enter NRIC (e.g. S1234567A)"}
+                value={searchQuery}
+                onChangeText={handleSearchTextChange}
+                autoCapitalize={searchMode === 'nric' ? "characters" : "none"}
+                autoCorrect={false}
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity onPress={() => handleSearchTextChange('')}>
+                  <MaterialIcons name="close" size={20} color="#9ca3af" />
+                </TouchableOpacity>
+              )}
+            </View>
+          </TutorialTarget>
         </View>
 
         {/* Contact List */}
@@ -169,10 +174,11 @@ export default function PayNowScreen() {
                   <Text className="text-gray-400">No contacts found</Text>
               </View>
             )}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                onPress={() => handleSelectContact(item)}
-                className="flex-row items-center py-4 border-b border-gray-100"
+            renderItem={({ item, index }) => (
+              <TutorialTarget id={index === 0 ? "contact-item" : undefined}>
+                <TouchableOpacity
+                  onPress={() => handleSelectContact(item)}
+                  className="flex-row items-center py-4 border-b border-gray-100"
               >
                 <View className="w-12 h-12 rounded-full justify-center items-center mr-4 bg-red-100">
                   <Text className="font-bold text-lg text-red-600">
@@ -195,6 +201,7 @@ export default function PayNowScreen() {
                 </View>
                 <MaterialIcons name="chevron-right" size={24} color="#d1d5db" />
               </TouchableOpacity>
+              </TutorialTarget>
             )}
           />
         )}

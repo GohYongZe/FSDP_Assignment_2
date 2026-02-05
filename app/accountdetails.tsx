@@ -53,6 +53,7 @@ const AccountDetailsScreen = ({
   const [selectedMonth, setSelectedMonth] = useState<string>("");
   const [language, setLanguage] = useState("en");
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [debitCardNumber, setDebitCardNumber] = useState<string>("");
 
   // get account data from params
   const accountType = (params.accountType as string) || "OCBC FRANK Account";
@@ -126,9 +127,39 @@ const AccountDetailsScreen = ({
     }
   };
 
+  // Fetch debit card number
+  const fetchDebitCardNumber = async () => {
+    if (!accountNumber) return;
+
+    try {
+      // Try to fetch from Localaccounts first
+      let { data, error } = await supabase
+        .from("Localaccounts")
+        .select("debitCardNumber")
+        .eq("accountNo", accountNumber)
+        .single();
+
+      if (error || !data) {
+        // Try Foreignaccounts if not found
+        ({ data, error } = await supabase
+          .from("Foreignaccounts")
+          .select("debitCardNumber")
+          .eq("accountNo", accountNumber)
+          .single());
+      }
+
+      if (data && data.debitCardNumber) {
+        setDebitCardNumber(data.debitCardNumber);
+      }
+    } catch (err) {
+      console.error("Error fetching debit card number:", err);
+    }
+  };
+
   useEffect(() => {
     loadLanguage();
     fetchTransactions();
+    fetchDebitCardNumber();
   }, [accountNumber]);
 
   // Set initial selected month when transactions are loaded

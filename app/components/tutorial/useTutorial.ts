@@ -3,14 +3,15 @@ import { LayoutRectangle } from "react-native";
 
 export interface TutorialContextType {
   isTutorialActive: boolean;
-  startTutorial: (screen: string) => void;
+  isGuideMode: boolean;
+  startTutorial: (screen: string, options?: { force?: boolean }) => void;
   stopTutorial: () => void;
-  currentStep: number;
-  nextStep: () => void;
-  prevStep: () => void;
   tutorialScreen: string | null;
+  enableGuideMode: () => void;
+  disableGuideMode: () => void;
+  language: string;
 
-  // New additions for layout registration
+  // Layout registration
   layouts: { [key: string]: LayoutRectangle };
   registerElement: (id: string, layout: LayoutRectangle) => void;
   completeTutorial: (screen: string) => Promise<void>;

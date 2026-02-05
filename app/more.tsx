@@ -13,6 +13,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useTutorial } from "./components/tutorial/useTutorial";
+import { tutorials } from "./components/tutorial/tutorialSteps";
 
 interface MoreProps {
   navigation?: any;
@@ -29,6 +31,7 @@ interface MenuItem {
 
 const More = ({ navigation }: MoreProps) => {
   const router = useRouter();
+  const { startTutorial, enableGuideMode } = useTutorial();
 
   useEffect(() => {
     loadSavedLanguage();
@@ -707,6 +710,9 @@ const More = ({ navigation }: MoreProps) => {
       icon: "book-open",
       label: t.guidedTutorials,
       category: t.helpSupport,
+      action: () => {
+        enableGuideMode();
+      },
     },
   ];
 
@@ -746,6 +752,7 @@ const More = ({ navigation }: MoreProps) => {
       key={item.id}
       style={styles.menuItem}
       onPress={() => handleItemPress(item)}
+      activeOpacity={0.8}
     >
       <View style={styles.iconContainer}>
         <FontAwesome5 name={item.icon} size={20} color="#333" solid />
